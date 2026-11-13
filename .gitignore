@@ -6,6 +6,12 @@
 sdkconfig.esp32s3geek*
 sdkconfig.old
 version.txt
+**/sdkconfig.esp32s3geek*
+**/managed_components/
+**/.pio/
+**/__pycache__/
+openwrt/build/
+*.pyc
 
 # Managed components (downloaded at build time)
 managed_components/
@@ -14,16 +20,21 @@ managed_components/
 hardware/__pycache__/
 hardware/fp-info-cache
 hardware/*.rpt
-hardware/AirBridge_Pro-backups/
+hardware/AirBridge.Pi-backups/
 hardware/grb/
 hardware/*.kicad_prl
+**/hardware/fp-info-cache
+**/hardware/*.rpt
+**/hardware/*.kicad_prl
+**/hardware/*-backups/
+**/hardware/grb/
 
 # Backup archives
-docs/AirBridge_Pro-backups/
+docs/AirBridge.Pi-backups/
 
 # Large binary files (keep SVGs, skip bitmaps)
 *.png
-docs/AirBridge_Pro_Technical_Spec.pdf
+docs/AirBridge.Pi_Technical_Spec.pdf
 
 # macOS
 .DS_Store
@@ -32,3 +43,19 @@ docs/AirBridge_Pro_Technical_Spec.pdf
 *.swp
 *.swo
 *~
+
+# Private credentials and device recovery artifacts (public driver key is explicit)
+.env
+.env.*
+*.key
+private.pem
+*private*.pem
+id_ed25519
+id_rsa
+*.img
+*.img.gz
+*.img.zst
+*.dump
+backups/
+sdk.tar.zst
+!openwrt/drivers/ma86xh/prebuilt/ma86xh-diagnostic-public.pem
