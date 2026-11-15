@@ -1,0 +1,87 @@
+diff -ru a/video/out/drm_common.c b/video/out/drm_common.c
+--- a/video/out/drm_common.c	2026-11-15 17:42:43.811306960 +0100
++++ b/video/out/drm_common.c	2026-11-15 17:42:43.804797474 +0100
+@@ -1418,6 +1418,11 @@
+     };
+     drmModeCreatePropertyBlob(drm->fd, &metadata, sizeof(metadata), &drm->hdr.blob_id);
+     drm_object_set_property(atomic_ctx->request, atomic_ctx->connector, "HDR_OUTPUT_METADATA", drm->hdr.blob_id);
++
++    // AirBridge: HDR at 8 bits per channel bands visibly; allow deep colour for
++    // HDR only and keep the validated 8-bit output for everything else.
++    drm_object_set_property(atomic_ctx->request, atomic_ctx->connector, "max bpc",
++                            pl_color_space_is_hdr(color) ? 10 : 8);
+ }
+ 
+ void vo_drm_set_monitor_par(struct vo *vo)
+diff -ru a/video/out/hwdec/hwdec_drmprime_overlay.c b/video/out/hwdec/hwdec_drmprime_overlay.c
+--- a/video/out/hwdec/hwdec_drmprime_overlay.c	2026-11-15 17:42:43.808094509 +0100
++++ b/video/out/hwdec/hwdec_drmprime_overlay.c	2026-11-15 17:42:43.801870647 +0100
+@@ -139,6 +139,52 @@
+     }
+ }
+ 
++// AirBridge: tell the display what the untouched video plane carries. The GPU
++// renderer never sees these frames, so nothing else signals their colour.
++static void signal_video_color(struct ra_hwdec *hw, struct mp_image *hw_image,
++                               drmModeAtomicReq *request)
++{
++    struct priv *p = hw->priv;
++    struct vo *vo = hw->ra_ctx ? hw->ra_ctx->vo : NULL;
++
++    if (hw_image && request) {
++        // Standard DRM enum values: 0 BT.601, 1 BT.709, 2 BT.2020; 0 limited, 1 full.
++        uint64_t encoding = 1;
++        switch (hw_image->params.repr.sys) {
++        case PL_COLOR_SYSTEM_BT_601:    encoding = 0; break;
++        case PL_COLOR_SYSTEM_BT_2020_NC:
++        case PL_COLOR_SYSTEM_BT_2020_C: encoding = 2; break;
++        default: break;
++        }
++        uint64_t range = hw_image->params.repr.levels == PL_COLOR_LEVELS_FULL ? 1 : 0;
++        // Optional properties: a plane without them simply keeps its default.
++        drm_object_set_property(request, p->ctx->drmprime_video_plane, "COLOR_ENCODING", encoding);
++        drm_object_set_property(request, p->ctx->drmprime_video_plane, "COLOR_RANGE", range);
++    }
++
++    if (!vo || !vo->drm)
++        return;
++
++    struct pl_color_space color = pl_color_space_srgb;
++    if (hw_image && pl_color_space_is_hdr(&hw_image->params.color)) {
++        // Static metadata only: per-frame dynamic values would change the
++        // signalled colour space, and so reconfigure the output, on every frame.
++        const struct pl_color_space *in = &hw_image->params.color;
++        color = (struct pl_color_space) {
++            .primaries = in->primaries,
++            .transfer = in->transfer,
++            .hdr = {
++                .prim = in->hdr.prim,
++                .min_luma = in->hdr.min_luma,
++                .max_luma = in->hdr.max_luma,
++                .max_cll = in->hdr.max_cll,
++                .max_fall = in->hdr.max_fall,
++            },
++        };
++    }
++    vo_drm_set_color(vo, &color);
++}
++
+ static int overlay_frame(struct ra_hwdec *hw, struct mp_image *hw_image,
+                          struct mp_rect *src, struct mp_rect *dst, bool newframe)
+ {
+@@ -204,6 +250,7 @@
+                 drm_object_set_property(request, p->ctx->drmprime_video_plane, "CRTC_W",  dstw);
+                 drm_object_set_property(request, p->ctx->drmprime_video_plane, "CRTC_H",  dsth);
+                 drm_object_set_property(request, p->ctx->drmprime_video_plane, "ZPOS",    0);
++                signal_video_color(hw, hw_image, request);
+             } else {
+                 ret = drmModeSetPlane(p->ctx->fd, p->ctx->drmprime_video_plane->id, p->ctx->crtc->id, next_frame.fb.fb_id, 0,
+                                       MP_ALIGN_DOWN(p->dst.x0, 2), MP_ALIGN_DOWN(p->dst.y0, 2), dstw, dsth,
+@@ -217,6 +264,7 @@
+         }
+     } else {
+         disable_video_plane(hw);
++        signal_video_color(hw, NULL, NULL);
+ 
+         while (p->old_frame.fb.fb_id)
+           set_current_frame(hw, NULL);

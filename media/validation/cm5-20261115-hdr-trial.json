@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-15",
+  "device": "CM5 Lite, OpenWrt 25.12.6, kernel 6.12.112; LG TV (EDID GSM, 2024)",
+  "status": "HDR passthrough NOT shipped. Trial only, via a bind mount of a patched mpv over the installed binary; removed afterwards.",
+  "cause_of_missing_hdr": "vo=gpu never calls the swapchain colour hint; only vo_gpu_next does, and it has no hwdec overlay path. Connector stayed Colorspace=Default, 8 bpc, no HDR metadata.",
+  "patch": "media/engine/experimental/mpv-hdr-overlay.patch",
+  "file": "3840x2024 HEVC Main10, PQ, BT.2020, 23.976 fps; Balanced profile, 1920x1080@24 output, hardware decode",
+  "router_side_with_patch": {
+    "colorspace": "BT2020_RGB",
+    "hdr_drm_infoframe": "87 01 1a 7a 02 00 ... EOTF PQ, max mastering 1000, MaxCLL 897, MaxFALL 497",
+    "plane_color_encoding": "ITU-R BT.2020 YCbCr (first build)",
+    "drops": "0/0",
+    "repeated_modesets": "none in 200 samples"
+  },
+  "tv_side_user_reports": [
+    {
+      "max_bpc": 12,
+      "tmds_hz": 111264000,
+      "result": "no signal, twice (second after stop/play)"
+    },
+    {
+      "max_bpc": 10,
+      "tmds_hz": 92720000,
+      "plane_matrix": "BT.2020",
+      "result": "TV indicates HDR, screen black"
+    },
+    {
+      "max_bpc": 10,
+      "plane_matrix": "BT.709 forced",
+      "result": "still black"
+    },
+    {
+      "max_bpc": 8,
+      "tmds_hz": 74176000,
+      "plane_matrix": "BT.709 forced",
+      "result": "not observed; user ended the trial"
+    }
+  ],
+  "invalid_trials": [
+    "A '10-bit' start that reran the 12-bit binary because ninja did not rebuild after a host-side copy (touch inside the container is needed)",
+    "A 'default matrix' build: the plane kept BT.2020 from the previous run because DRM plane properties persist"
+  ],
+  "black_picture_state": "video plane attached with P030 frames, overlay plane transparent over the picture area (alpha 0 on 30,240 of 32,400 samples; opaque only on the letterbox bars), playing with zero drops",
+  "after_removal": {
+    "installed_mpv_sha256_prefix": "15436a2574a1043b",
+    "connector": "Default colorspace, 8 bpc",
+    "plane": "BT.709 limited",
+    "hdmi_phy_at_74MHz": "0x80828700 on all lanes (rpi-6.12.y band-1 values)",
+    "user_report": "SD film at 1080p25 first looked full of green specks and stuttering while the player reported zero drops; after a media-service restart it was stable and smooth but with green specks",
+    "interpretation": "Unproven. Router-readable state was identical before and after the restart. Specks in the film's early dark scenes are expected to some degree: the r7 shader left about 27 % of them in simulation."
+  },
+  "apple_tv_cross_check": "User: an Apple TV 4K on the same TV plays 4K HDR and Dolby Vision without problems. Whether it uses the same HDMI port and cable was not established. This points the unresolved 4K flicker at the router's 4K output path rather than the TV.",
+  "sanity_check_readonly": {
+    "service": "enabled, S95; player and controller running",
+    "cpu": "mpv about 18 % of one core for 720x576 H.264 at 1080p25; controller 1 tick in 20 s",
+    "memory": "mpv RSS 55 MB, controller 1.2 MB; CMA 512 MiB, 470 MiB free",
+    "thermal": "65.3 C, throttled=0x80000 (soft temperature limit reached since boot)",
+    "storage": "root 21.9 MiB free, media 34 GiB free",
+    "governor": "ondemand at 1.5 GHz",
+    "leftovers": "stale /etc/airbridge-media/mpv.conf.apk-new and /etc/config/airbridge-media.apk-new; trial binaries in /tmp until reboot"
+  },
+  "performance": "No change made. The player is not CPU- or memory-bound in the measured cases and no setting with a measured gain was found."
+}
