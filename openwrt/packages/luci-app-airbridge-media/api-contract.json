@@ -1,0 +1,148 @@
+{
+	"object": "airbridge.media",
+	"transport": "LuCI rpc.declare using the existing authenticated same-origin LuCI session",
+	"package_dependency": "airbridge-media (file-management API requires backend 1.0.0-r4 or newer; custom signed helper dependency owned by lead)",
+	"read_methods": [
+		"status",
+		"browse",
+		"storage"
+	],
+	"write_methods": [
+		"play",
+		"pause",
+		"stop",
+		"seek",
+		"volume",
+		"tracks",
+		"queue",
+		"profile",
+		"remove",
+		"upload_begin",
+		"upload_cancel"
+	],
+	"methods": {
+		"status": [],
+		"browse": [
+			"path",
+			"offset",
+			"limit"
+		],
+		"play": [
+			"path"
+		],
+		"pause": [
+			"paused"
+		],
+		"stop": [],
+		"seek": [
+			"seconds",
+			"relative"
+		],
+		"volume": [
+			"value",
+			"mute"
+		],
+		"tracks": [
+			"type",
+			"id"
+		],
+		"queue": [
+			"action",
+			"path"
+		],
+		"profile": [
+			"name"
+		],
+		"storage": [],
+		"remove": [ "path" ],
+		"upload_begin": [ "path", "size" ],
+		"upload_cancel": [ "token" ]
+	},
+	"upload_transport": {
+		"url": "L.env.cgi_base + '/airbridge-media-upload', a validated fixed same-origin path, no query parameters",
+		"method": "POST",
+		"luci_request_cache": "Set options.cache=true and omit query: installed LuCI otherwise appends a timestamp query to POST too. This preserves the fixed URL, not HTTP response caching; CGI sends Cache-Control:no-store.",
+		"content_type": "application/octet-stream",
+		"authorization": "Bearer <existing LuCI session id>:<opaque 64-lowerhex token>:<decimal byte offset>",
+		"body": "1..1048576 raw bytes from file.slice(start,end). Pass request.post a content callback function(xhr){capture xhr;return Blob}, never pass a Blob directly because LuCI JSON-stringifies objects.",
+		"reply": "ok,error,offset:next byte,size:declared total,complete:boolean,path:relative. UI checks every field against expected byte range/path. Final nonempty chunk atomically publishes without overwrite; there is no finish request.",
+		"coordination": "One file and one chunk at a time. No automatic retry/resume or whole-file memory/root/tmp buffering. Best-effort upload_cancel on error/cancel; refresh library because a committed final response may be lost.",
+		"cancel": "Set cancellation state, abort captured XHR, await best-effort upload_cancel and refresh storage/library; completed files may remain. Never clear or overwrite an existing library file.",
+		"timeouts": "45-second client request timeout; server idle30s/total60s and upload inactivity expiry900s.",
+		"credential_scope": "Session/token go only in Authorization, with decimal offset as the third field; never session/token in DOM, URL/query, logs or user-visible errors. Transport errors echoing these credentials are redacted. Binary data is not sent through ubus.",
+		"server_only": "Internal _upload_claim/_upload_done/_upload_abort methods are not declared or granted in web ACLs."
+	},
+	"request_rules": {
+		"path": "Library-relative path returned by browse; the empty string denotes the browse root. No free-form path input.",
+		"browse": "offset is an integer 0..4096; UI limit=50, next offset=returned offset+entries.length. Previous returns an observed page boundary. scan_limited=true stops forward pagination and prompts navigation into subdirectories.",
+		"pause": "paused is a boolean; true pauses, false resumes.",
+		"seek": "seconds is finite in -31536000..31536000; relative=true accepts signed seconds, relative=false accepts nonnegative absolute seconds.",
+		"volume": "value is 0..100; mute is boolean. This UI supplies both and preserves the other reported value.",
+		"tracks": "type is audio or sub; id is 1..65535 from track_list. Confirmed id=0 disables that track type; Off is offered only when track metadata exists.",
+		"queue": "action is list, append, clear or next. append sends a library-relative path; other actions send path=\"\".",
+		"profile": "name is balanced, quality4k or quiet. Default quality4k stops current playback when selected and requires hardware decoding on the next play; balanced and quiet allow software decoding for diagnostics.",
+		"remove": "Only a regular file returned by browse; explicit permanent-delete confirmation. A held playback inode must be stopped by the user first; no implicit stop or recursive deletion.",
+		"upload_begin": "path is current browse directory plus a validated selected filename; size is a positive safe integer <=2^53-1. uhttpd injects the actual ubus_rpc_session; the UI never supplies or overrides it.",
+		"upload_cancel": "Opaque token only; same-owner cleanup is idempotent after expiry/automatic abort/publication. Wrong active owner is denied."
+	},
+	"response_rules": {
+		"common": "All replies have ok:boolean and error:string|null. Non-status error strings and ok:false are failures.",
+		"status": {
+			"state": [
+				"idle",
+				"playing",
+				"paused",
+				"unavailable"
+			],
+			"available": "boolean; engine availability, not proof of hardware playback",
+			"capabilities": "Per-control boolean map: browse, play, pause, stop, seek, volume, mute, tracks, queue, profile, storage, remove, upload_begin, upload_cancel. File-operation booleans are independent of engine availability. Missing or false disables that control.",
+			"fields": [
+				"title",
+				"time_pos",
+				"duration",
+				"volume",
+				"mute",
+				"track_list",
+				"codec",
+				"width",
+				"height",
+				"hwdec",
+				"dropped_frames",
+				"vo_dropped_frames",
+				"avsync",
+				"error",
+				"profile",
+				"media_root_available",
+				"verified_4k"
+			],
+			"track_list": "Actual mpv array with {id:integer,type:string,title?:string,lang?:string,selected?:boolean}. Only audio/sub entries are shown.",
+			"unknown_telemetry": "Null or missing values display as an em dash, never as confirmed decoder/HDMI evidence.",
+			"unavailable": "A successful status reply may have ok:true,available:false,state:unavailable,error:string; retain its browse capability."
+		},
+		"browse": "path:string,entries:[{name:string,path:string,type:file|directory,size_bytes:number|null}],offset:integer,more:boolean,scan_limited:boolean",
+		"queue": "list/append/clear return entries:[library-relative string], max128; next returns play acknowledgement and removes the first entry only on success. Memory-only; no current-index or automatic advance.",
+		"commands": "Require ok:true and error:null; then refresh status and queue rather than assuming playback succeeded.",
+		"storage": "mounted,writable,upload,delete booleans; reason:string|null; total_bytes,free_bytes,usable_bytes,reserve_bytes,max_file_bytes,chunk_size,max_uploads,active_uploads safe nonnegative integers. reserve_bytes=268435456, chunk_size=1048576,max_uploads=2. max_file_bytes accounts for active reservations. Mount-readiness flags are not ACL permissions.",
+		"upload_begin": "token:64 lowercase hex characters,offset:0,size,chunk_size:1048576,expires_in:900,path,max_size. Store capability in transfer memory only.",
+		"upload_cancel": "canceled:boolean; false is successful idempotent cleanup when already absent.",
+		"remove": "path:string. Server revalidates containment/type/mount/active inode and prunes matching queue entries."
+	},
+	"ui_behavior": {
+		"poll_seconds": 2,
+		"readonly_sessions": "May status/browse/storage only. Upload, cancellation and permanent delete require write permission; queue:list also requires write permission because all queue actions share one RPC method.",
+		"unavailable_engine": "Disables playback/queue/profile controls; browse/storage/upload/delete remain independently capability/mount/ACL-gated. A transfer does not set the playback busy flag.",
+		"unsupported": [
+			"No URLs, absolute path entry, shell commands, generic filesystem/UCI writes or arbitrary RPC methods.",
+			"No automatic next-item promise, queue reordering, rename, directory upload/deletion, recursive operations or generic file manager.",
+			"No engine installation, service start, display configuration, reboot or hardware acceptance action."
+		],
+		"security": "Untrusted names and metadata are rendered as text nodes/textContent. ACL grants only exact airbridge.media methods. Server-side confinement, symlink/race handling, and strict argument validation remain mandatory.",
+		"hardware_acceptance": "Manual device test; telemetry alone does not certify HDMI picture/audio/performance. See media/validation and docs/MEDIA.md."
+	},
+	"validation": {
+		"ui_and_acl": "node openwrt/packages/luci-app-airbridge-media/tests/test-ui.js",
+		"file_management": "node openwrt/packages/luci-app-airbridge-media/tests/test-files.js (Node with built-in Blob support)",
+		"syntax": "node --check openwrt/packages/luci-app-airbridge-media/htdocs/luci-static/resources/view/airbridge/media.js",
+		"scope": "Dependency-free mocked DOM/RPC and static schema/ACL tests only; not a browser, rpcd integration, package cross-build or hardware test."
+	}
+}

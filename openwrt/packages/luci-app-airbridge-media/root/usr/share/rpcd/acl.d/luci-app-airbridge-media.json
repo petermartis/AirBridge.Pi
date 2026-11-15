@@ -1,0 +1,18 @@
+{
+	"luci-app-airbridge-media": {
+		"description": "Browse, upload and delete local media and control AirBridge playback",
+		"read": {
+			"ubus": {
+				"airbridge.media": [ "status", "browse", "storage" ]
+			}
+		},
+		"write": {
+			"ubus": {
+				"airbridge.media": [
+					"play", "pause", "stop", "seek", "volume",
+					"tracks", "queue", "profile", "remove", "upload_begin", "upload_cancel"
+				]
+			}
+		}
+	}
+}

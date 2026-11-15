@@ -1,0 +1,8 @@
+/media-host
+/build/
+/media-files-host
+/media-cgi-host
+/media-upload-unit
+/media-rpc-unit
+/*.dSYM/
+/media-host.dSYM/

@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "openwrt_version": "25.12.6",
+  "openwrt_version_code": "r33311-981c978eff",
+  "openwrt_revision": "981c978eff636fc7d81f0ed17b00e2a6317c949a",
+  "kernel_version": "6.12.112",
+  "kernel_abi": "294a8151df6d94c4f262106e0654471f",
+  "kernel_dependency": "kernel (=6.12.112~294a8151df6d94c4f262106e0654471f-r1)",
+  "target": "bcm27xx/bcm2712",
+  "architecture": "aarch64_cortex-a76",
+  "module": "rpi-hevc-dec",
+  "package": "kmod-airbridge-hevc",
+  "license": "GPL-2.0-only",
+  "license_text": {
+    "path": "LICENSES/GPL-2.0",
+    "url": "https://raw.githubusercontent.com/gregkh/linux/v6.12.112/LICENSES/preferred/GPL-2.0",
+    "sha256": "f6b78c087c3ebdf0f3c13415070dd480a3f35d8fc76f3d02180a407c1c812f79",
+    "bytes": 18729
+  },
+  "source_subtree": "drivers/media/platform/raspberrypi/hevc_dec",
+  "openwrt_source_archive": {
+    "url": "https://codeload.github.com/openwrt/openwrt/tar.gz/981c978eff636fc7d81f0ed17b00e2a6317c949a",
+    "sha256": "b17aacd2ee31faf64c1d8d99bdb194ae1a4ff68e008ca4f6a504a9985b134174",
+    "bytes": 11813390
+  },
+  "base_kernel_archive": {
+    "url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.12.112.tar.xz",
+    "sha256": "164dc9d1f6c93c61a15e1f071c48379b467f2b17c469cce7223471968208ed03",
+    "verification": "hash from exact release target/linux/generic/kernel-6.12; kernel archive not downloaded by this work"
+  },
+  "sdk_archive": {
+    "url": "https://downloads.openwrt.org/releases/25.12.6/targets/bcm27xx/bcm2712/openwrt-sdk-25.12.6-bcm27xx-bcm2712_gcc-14.3.0_musl.Linux-x86_64.tar.zst",
+    "sha256": "9edc70b7bd3714ec31512af91c0152be40f029e7ea3ef626eef26d42433bd1ce",
+    "verification": "public release sha256sums; SDK archive not downloaded by this work"
+  },
+  "bcm27xx_patch_tree_git_object": "7127beb1a75da06b286ac82a3e8da3888fdf0cc3",
+  "patch_closure_verification": "all exact-release bcm27xx patch bodies scanned; exactly these four modify the decoder subtree",
+  "patches": [
+    {
+      "name": "950-0834-media-platform-Add-Raspberry-Pi-HEVC-decoder-driver.patch",
+      "url": "https://raw.githubusercontent.com/openwrt/openwrt/981c978eff636fc7d81f0ed17b00e2a6317c949a/target/linux/bcm27xx/patches-6.12/950-0834-media-platform-Add-Raspberry-Pi-HEVC-decoder-driver.patch",
+      "sha256": "ef5f170cdaad35035dcf1e0b56ada1560b9081b4ed49a18d6482ff3b6cc08593",
+      "bytes": 130378,
+      "upstream_commit": "038efbab4ef95fd22ee6b25027cb6cf25248ea3d"
+    },
+    {
+      "name": "950-0839-media-hevc_dec-Add-in-downstream-single-planar-SAND-.patch",
+      "url": "https://raw.githubusercontent.com/openwrt/openwrt/981c978eff636fc7d81f0ed17b00e2a6317c949a/target/linux/bcm27xx/patches-6.12/950-0839-media-hevc_dec-Add-in-downstream-single-planar-SAND-.patch",
+      "sha256": "1834b9b3570ab677c61e45199934e85bf8be2e8d6a945212bacdeeff41174e60",
+      "bytes": 10189,
+      "upstream_commit": "18d2ec3465dfa8d0175ff87a7ce40430ee97ce36"
+    },
+    {
+      "name": "950-0846-media-hevc_dec-Add-module-parameter-for-video_nr.patch",
+      "url": "https://raw.githubusercontent.com/openwrt/openwrt/981c978eff636fc7d81f0ed17b00e2a6317c949a/target/linux/bcm27xx/patches-6.12/950-0846-media-hevc_dec-Add-module-parameter-for-video_nr.patch",
+      "sha256": "b0e7a7e0714adbaebd68429a7562973cd341211ac19fd273e353417ca71e6e0f",
+      "bytes": 1486,
+      "upstream_commit": "67b85dd90938f63b00e8c53ddc60357eafece93b"
+    },
+    {
+      "name": "950-0847-media-hevc_dec-Drop-the-new-image-formats-until-we-h.patch",
+      "url": "https://raw.githubusercontent.com/openwrt/openwrt/981c978eff636fc7d81f0ed17b00e2a6317c949a/target/linux/bcm27xx/patches-6.12/950-0847-media-hevc_dec-Drop-the-new-image-formats-until-we-h.patch",
+      "sha256": "05d3861f7df2724bfb898dbbb63b596a2fe1f1af9154e0f33427eb014c02719c",
+      "bytes": 1666,
+      "upstream_commit": "7821b6a1baefd97757142d9c3227b5219e9f4568"
+    }
+  ],
+  "files": {
+    "Makefile": {"bytes": 205, "sha256": "97f12192b0fa8b3b6f43931059802401d7037df28a91317638698a71a1d7902f"},
+    "hevc_d.c": {"bytes": 10604, "sha256": "f3db5d6394d870d8d10b02ec6dd0b2d24b6d83af3a79c05d03600420400df598"},
+    "hevc_d.h": {"bytes": 4207, "sha256": "a4aec17984f440d1d85966ad244ae2e024b2e8458cea114bdee7fbec0fe56671"},
+    "hevc_d_h265.c": {"bytes": 69999, "sha256": "9348d4fb33040981b6aa97b4d4ba9192f636d680ddd1121cfe631e6aba816eb9"},
+    "hevc_d_h265.h": {"bytes": 580, "sha256": "be84179ef92129ef31bb28abc0d4c17ffa4127fd1ff424363115ef6ead88a714"},
+    "hevc_d_hw.c": {"bytes": 9258, "sha256": "37bf0af3e3f239918907bbd50d5d4ea08ff84222cbc0f8827ab5386ec39efeb0"},
+    "hevc_d_hw.h": {"bytes": 9249, "sha256": "e8c18bbfc53ba5a4940bba9e7edad3981d689582bdbc872b5819348c35778b04"},
+    "hevc_d_video.c": {"bytes": 19599, "sha256": "a63bc11511186f5183c062845014b56bd3acc6998424a41b14d8a70538a9efb3"},
+    "hevc_d_video.h": {"bytes": 973, "sha256": "1208f5dbfcd74f2025131c23a5c45d668689b89e28fd3eff5a5c83b706c74b13"}
+  },
+  "existing_kernel_prerequisites": {
+    "prepared_file_sha256": {
+      ".config": "d1640f7e7e88fa1ff19741b7b367c52d13eba04a91db76b6255020a509e0298e",
+      "include/generated/autoconf.h": "2e51cd255abc341e9109bfe7e58ad58a17136074a514321693661c12461decdb",
+      "include/generated/utsrelease.h": "f85b4b4376daa273d74011f6b7258a632ae7c44a30756644a6b3233ee04f51af",
+      "Module.symvers": "0b1bfb7f55cf3e9fe0dcbaf86c467f839f58ab88eb18a5dc17600ad31a3aa885",
+      "include/media/media-request.h": "0bf1935b49cc178e36d37a667035ed6cd161e90d198ab0a4acc77ead24edd39d",
+      "include/uapi/linux/videodev2.h": "801a5b0714a23abc4c39a5d00eb24415297c4e2cedd06c908f595f95acd2c0bb"
+    },
+    "inspection": "read-only inspection of retained exact SDK prepared kernel; not live router verification",
+    "builtin_config": ["VIDEO_DEV", "MEDIA_CONTROLLER", "CMA", "DMA_CMA", "BCM2712_IOMMU", "RASPBERRYPI_FIRMWARE"],
+    "modular_config": ["V4L2_MEM2MEM_DEV", "VIDEOBUF2_DMA_CONTIG"],
+    "vmlinux_exports": ["media_request_manual_complete", "v4l2_ctrl_request_setup", "rpi_firmware_property", "rpi_firmware_get"],
+    "module_exports": ["v4l2_m2m_init", "vb2_dma_contig_memops"],
+    "uapi_formats": ["V4L2_PIX_FMT_NV12_COL128", "V4L2_PIX_FMT_NV12_10_COL128", "V4L2_PIX_FMT_NV12MT_COL128", "V4L2_PIX_FMT_NV12MT_10_COL128"],
+    "modversions": false,
+    "decoder_config_enabled": false
+  },
+  "device_tree_evidence": {
+    "url": "https://raw.githubusercontent.com/openwrt/openwrt/981c978eff636fc7d81f0ed17b00e2a6317c949a/target/linux/bcm27xx/patches-6.12/950-0837-dts-bcm2712-Fixup-HEVC-decoder-nodes-for-new-driver.patch",
+    "sha256": "697b130615754616c3f50268b72090965f57a919631d145a8044c78c32fd99db",
+    "compatible": ["brcm,bcm2712-hevc-dec", "raspberrypi,hevc-dec"],
+    "live_device_tree_verified": false
+  },
+  "autoload": false,
+  "kernel_configuration_modified": false,
+  "hardware_validated": false
+}

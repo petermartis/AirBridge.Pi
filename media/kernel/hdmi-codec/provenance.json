@@ -1,0 +1,68 @@
+{
+  "autoload": false,
+  "prepared_kernel_evidence": {
+    "inspection": "read-only copied matching prepared kernel; no router inspection by this subtask",
+    "hdmi_codec_header_sha256": "5a74465ad44b60e87aeee7f83fe39cd75065a6173a0f889ae7435b447aa21591",
+    "hdmi_codec_header_matches_stable_commit": true,
+    "config": {
+      "SND_SOC_HDMI_CODEC": "m",
+      "SND_SOC": "m",
+      "SND_PCM": "m",
+      "SND_PCM_ELD": "y",
+      "SND_PCM_IEC958": "y",
+      "SND_JACK": "y"
+    },
+    "symbol_owners": {
+      "snd_jack_report": "sound/core/snd",
+      "snd_pcm_add_chmap_ctls": "sound/core/snd-pcm",
+      "snd_pcm_hw_constraint_eld": "sound/core/snd-pcm",
+      "snd_pcm_create_iec958_consumer_hw_params": "sound/core/snd-pcm",
+      "snd_soc_register_component": "sound/soc/snd-soc-core",
+      "snd_soc_unregister_component": "sound/soc/snd-soc-core"
+    }
+  },
+  "files": {
+    "Makefile": {
+      "bytes": 159,
+      "sha256": "c385523384230a1480283c063781976c7ba908ac69b50f0db843bd209908e051"
+    },
+    "hdmi-codec.c": {
+      "bytes": 32393,
+      "sha256": "96180b76d3dd9316149db895d83f35c298c215361df7f710e5110b0215ad292f"
+    }
+  },
+  "hardware_validated": false,
+  "kernel_abi": "294a8151df6d94c4f262106e0654471f",
+  "kernel_configuration_modified": false,
+  "kernel_dependency": "kernel (=6.12.112~294a8151df6d94c4f262106e0654471f-r1)",
+  "kernel_version": "6.12.112",
+  "license": "GPL-2.0-only",
+  "license_text_sha256": "f6b78c087c3ebdf0f3c13415070dd480a3f35d8fc76f3d02180a407c1c812f79",
+  "linux_revision": "7aba70ab2e8d8ab3cd45abcaa15e1119a00dc42a",
+  "linux_tag": "v6.12.112",
+  "linux_tag_object": "1092ff6640e96a20f741340bac5187c31070f091",
+  "module": "snd-soc-hdmi-codec",
+  "openwrt_revision": "981c978eff636fc7d81f0ed17b00e2a6317c949a",
+  "package": "kmod-airbridge-hdmi-codec",
+  "patch_closure_evidence": {
+    "archive_sha256": "b17aacd2ee31faf64c1d8d99bdb194ae1a4ff68e008ca4f6a504a9985b134174",
+    "archive_url": "https://codeload.github.com/openwrt/openwrt/tar.gz/981c978eff636fc7d81f0ed17b00e2a6317c949a",
+    "header_overlays": [],
+    "header_patch_references": [],
+    "openwrt_revision": "981c978eff636fc7d81f0ed17b00e2a6317c949a",
+    "scanned_patch_directories": {
+      "target/linux/bcm27xx/patches-6.12": 884,
+      "target/linux/generic/backport-6.12": 277,
+      "target/linux/generic/hack-6.12": 56,
+      "target/linux/generic/pending-6.12": 151
+    },
+    "source_overlays": [],
+    "source_patch_closure": []
+  },
+  "schema_version": 1,
+  "source_bytes": 32393,
+  "source_overlays": [],
+  "source_patch_closure": [],
+  "source_sha256": "96180b76d3dd9316149db895d83f35c298c215361df7f710e5110b0215ad292f",
+  "source_url": "https://raw.githubusercontent.com/gregkh/linux/7aba70ab2e8d8ab3cd45abcaa15e1119a00dc42a/sound/soc/codecs/hdmi-codec.c"
+}

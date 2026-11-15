@@ -1,0 +1,13 @@
+{
+	"admin/services/airbridge-media": {
+		"title": "AirBridge.Pi Media",
+		"order": 60,
+		"action": {
+			"type": "view",
+			"path": "airbridge/media"
+		},
+		"depends": {
+			"acl": [ "luci-app-airbridge-media" ]
+		}
+	}
+}

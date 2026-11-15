@@ -8,6 +8,7 @@ Read `README.md`, `docs/STATUS.md`, `docs/HARDWARE.md`, `docs/DEVELOPMENT.md`, a
 - Active application: `openwrt/lcd.c`, `telemetry.sh`, `airbridge-lcd.init`.
 - `make check` is the primary hardware-free validation command.
 - No agent framework, Arduino toolchain, framebuffer or Python runtime is required on the router.
+- Media work is now implemented: read `docs/MEDIA.md`, `media/controller/README.md` and `media/kernel/README.md`. Run `make check-media` in addition to baseline checks. Native tests need host json-c/pkg-config, Python 3 and Node.
 
 ## Device access and safety
 - Last management address: `192.168.1.185`, Ethernet MAC `98:fe:54:26:85:72`; DHCP can change the address.
@@ -15,7 +16,7 @@ Read `README.md`, `docs/STATUS.md`, `docs/HARDWARE.md`, `docs/DEVELOPMENT.md`, a
 - Do not print `/etc/config/wireless`, `uci show wireless`, `ubus call network.wireless status`, private hostapd files or recovery archives: these may expose credentials. Read targeted nonsecret fields or `iw dev` instead.
 - No kernel/OpenWrt/wireless upgrades, EEPROM changes, disk formatting or reboots without an explicit need and coordinated user approval.
 - Preserve the SD card, management bridge, 80 MHz default and custom driver. Never assume NAT is active.
-- Router reachability failed on 2026-11-13. Recheck connectivity; do not equate that with hardware failure or assume today's state from this file.
+- Router access was restored during the 2026-11-13/14 media work. Recheck connectivity and current state rather than assuming this snapshot is current.
 
 ## Hardware invariants
 - SPI0 display CE0/GPIO8; DC GPIO24; RESET GPIO25.
@@ -37,7 +38,22 @@ Run `make check`; cross-compile hardware changes against the matching SDK, and u
 
 Inspect Git state before editing; preserve unrelated work. Do not commit/push unless requested. Do not include secrets, SDKs, build containers, SD images or raw device backups. Keep operational identifiers stable unless explicitly migrating them. New code may improve the UI, but do not expand into router topology or touch activation without a separate reviewed scope.
 
+## Media invariants and storage
+- Existing kernel was not upgraded. `rpi-hevc-dec.ko` and `snd-soc-hdmi-codec.ko` are exact-release external add-ons; use recovered source/fingerprint guards, never latest unrelated drivers or forced vermagic.
+- Approved boot overlay is `vc4-kms-v3d-pi5,cma-512`, alongside the original SPI overlay. Explicit activation loads HDMI codec before stock VC4 and starts the media service idle. Do not silently enable autoload on another device before validation.
+- Use the validated R3 zero-copy mapping: `gpu-hwdec-interop=drmprime-overlay`, `drm-draw-plane=overlay`, `drm-drmprime-video-plane=primary`, `drm-format=xrgb8888`, with Mesa VC4/V3D and the built-in fast profile. The original default plane ordering failed atomic commits because VC4 overlays cannot use zpos 0; swapping plane roles fixed it. Do not revert to that failed default or reduce video resolution to hide drops.
+- LuCI: Services → AirBridge.Pi Media; `airbridge.media` is a narrow authenticated API, not a raw mpv command proxy. Socket stays private. Both processes still use diagnostic root privileges; dedicated-UID hardening remains unfinished.
+- File management is shipped as backend R5/UI R4. Public storage/remove/upload_begin/upload_cancel methods are narrow media-only operations; binary POSTs use `/cgi-bin/airbridge-media-upload`, existing-session permission checks and session-bound opaque capabilities. Never grant generic `file.write`/exec access or put credentials in URLs/logs. Bulk I/O/fsync must stay outside the playback event loop.
+- Preserve upload containment: only a dedicated mounted ext4 media filesystem (not root/boot/tmpfs), no symlinks/cross-mount paths, private staging, 256 MiB reserve, no-overwrite publication, Stop before deleting held playback files. Retain canceled claimed FDs until worker acknowledgement/lease expiry to prevent FD-number reuse races.
+- Installed LuCI JSON-stringifies a direct Blob and appends cache-busting query parameters by default: keep the raw-body callback and `cache:true` URL-preservation option. CGI responses remain `Cache-Control:no-store`; uhttpd requires `Status: CODE REASON`, not a bare numeric status.
+- SD layout now has unchanged boot start/ID, a 512 MiB p2 containing a 128 MiB ext4 root, and p3 (~58.6 GiB mounted) at `/mnt/media` by UUID. Root has only ~22 MiB free. Do not assume 512 MiB partition capacity means the root filesystem grew to that size.
+- Root growth hit the known OpenWrt reserved-GDT bug. Do not repeat online resize, repair mounted filesystems, bypass detection through loop aliases, or format root. Only the explicitly approved new p3 was formatted.
+- HEVC Main/Main10 4K30 decode/direct scanout was measured: both added zero decoder/display drops in the ~20-second steady windows; 1–2 startup display drops remain. User confirmed the clean Main10 motion is smooth without flashes. See `media/validation/cm5-20261114-optimization.json`. This is not a feature-film/4K60/HDR or every-codec/profile guarantee.
+- Default `quality4k` intentionally rejects software decoding. Use `balanced` for H.264/VP9/AV1 or audio-only files; it still allows supported hardware decoding. Profile and queue are in-memory and reset on controller restart. The 2026-11-15 `1080p-h264-fallback.mp4` failure is open: Balanced was recommended based on a previous successful test, but live diagnosis/retry remains unconfirmed after SSH authentication expired. Do not describe the latest report as fixed.
+
 ## External local artifacts
 `/Users/pmartis/.local/state/openwrt-builds/ma86xh-25.12.6/` contains the retained SDK, source and old diagnostic artifacts. Docker container `ma86xh-diag-20261106` previously held SDK `/build`, pinned driver tree `/driver`, and a **private signing key**. Do not inspect/copy/publish that key. Neither this directory nor the container is guaranteed to exist in a new environment.
 
 Essential source/recipe/signed-r6/public-key recovery files are now tracked in this repository. SDK fingerprint and fresh/retained environment instructions are in the driver guide. Private router recovery files under `/root/ma86xh-backup-20261106/` and `/root/airbridge-lcd-backup/` stay on-device; never commit them.
+
+Media build workspace/container: `/Users/pmartis/.local/state/airbridge-media-build/`, `airbridge-media-build-20261113`. Signed APKs/public key/manifests are in its `artifacts/`; **private key is in `signing/private.pem` and must never be read or published**. A byte-verified initialized-SD backup is under `/Users/pmartis/.local/state/airbridge-media-private-backups/20261113-221647/`, outside Git, mode-restricted. It predates p3: do not blindly restore its partition table over the new media layout/data.

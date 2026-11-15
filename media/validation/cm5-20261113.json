@@ -1,0 +1,65 @@
+{
+  "platform": "CM5 Lite 4GB, BentoIO CMX2, OpenWrt 25.12.6",
+  "kernel": "6.12.112",
+  "kernel_abi": "294a8151df6d94c4f262106e0654471f",
+  "kernel_replaced": false,
+  "engine": {
+    "mpv": "0.42.0",
+    "ffmpeg": "Pi fork 8.1.2",
+    "mesa": "25.0.7"
+  },
+  "playback_path": "HEVC V4L2 request -> DRM PRIME -> regular GPU OpenGL -> VC4 HDMI; ALSA HDMI audio",
+  "decoder_device_observed": "/dev/video19",
+  "output": "3840x2160@30",
+  "source": "SD /dev/mmcblk0p3, /mnt/media/Test",
+  "samples": {
+    "hevc_main": {
+      "width": 3840,
+      "height": 2160,
+      "fps": 30,
+      "bit_depth": 8,
+      "hwdec": "drm",
+      "format": "drm_prime[rpi4_8]",
+      "picture_audio": "User confirmed moving picture and quiet continuous tone"
+    },
+    "hevc_main10": {
+      "width": 3840,
+      "height": 2160,
+      "fps": 30,
+      "bit_depth": 10,
+      "hwdec": "drm",
+      "format": "drm_prime[rpi4_10]",
+      "native_api": "play/queue/pause/seek/resume succeeded; status reported Main 10 with hardware decoding"
+    }
+  },
+  "observed_metrics": {
+    "decoder_frame_drops": 0,
+    "native_api_main_vo_drops_at_2s": 4,
+    "native_api_main10_vo_drops_after_seek": 2,
+    "native_api_main10_avsync_seconds": -3e-06,
+    "earlier_short_loop_vo_drops": "15 per Main pass; 38-41 per Main10 pass. Not a claim of drop-free sustained playback.",
+    "throttled_flags": "0x0",
+    "temperature_observed_celsius": 60.4
+  },
+  "rejected_experiment": "drmprime-overlay emitted repeated atomic commit errors; not enabled despite low reported drop counts",
+  "ui": "User screenshot confirms authenticated LuCI view loaded and engine/library status; actual ubus control path tested on-device",
+  "storage": {
+    "boot_partition_unchanged": true,
+    "root_partition_mib": 512,
+    "root_filesystem_mib": 128,
+    "root_growth_limit": "Known OpenWrt reserved-GDT online-resize bug; no forced/mounted repair performed",
+    "media_device": "/dev/mmcblk0p3",
+    "media_uuid": "473ae6c1-45bb-486b-b30e-db3d20f4b885",
+    "media_mounted_gib": 58.6,
+    "only_new_media_partition_formatted": true
+  },
+  "not_validated": [
+    "4K60",
+    "HDR/Dolby Vision",
+    "all codec/profile/bitrate combinations in realtime",
+    "sustained concurrent Wi-Fi load benchmark",
+    "non-root production device permissions"
+  ],
+  "startup": "Reboot on2026-11-14verifiedcontroller/player, media mount, decoder, HDMI audio, LCD/WiFi startup; postbootMain10actualDRMplaybackpassed.",
+  "optimization_followup": "See cm5-20261114-optimization.json for corrected zero-copy scanout and measured zero steady-state drops."
+}

@@ -1,0 +1,140 @@
+{
+  "installed": {
+    "backend": "1.0.0-r5",
+    "luci": "1.0.0-r4"
+  },
+  "browser_confirmation": "User confirmed Upload and Delete both work after hard refresh",
+  "http_smoke": {
+    "checks": [
+      "unauthenticated/readonly/private-RPC requests denied",
+      "upload traversal/absolute/internal paths denied",
+      ">4GiB size accepted and canceled without a whole-file transfer",
+      "session ownership, partial visibility and cancellation checked",
+      "streamed file published once; exact size/SHA256 verified; duplicate refused",
+      "generated uploaded file deleted through scoped API"
+    ],
+    "uploaded_bytes": 8400953,
+    "upload_seconds": 0.43491091701434925,
+    "sha256_verified": true,
+    "full_4GiB_transfer_tested": false
+  },
+  "large_transfer": {
+    "bytes": 536883257,
+    "upload_plus_hash_and_validation_seconds": 18.6547021670267,
+    "sha256_verified": true,
+    "temporary_generated_file_deleted": true,
+    "full_4GiB_transfer_tested": false
+  },
+  "concurrent_4k": {
+    "sample": "Test/4k-main10-30s.mkv",
+    "resolution": [
+      3840,
+      2160
+    ],
+    "hwdec_values": [
+      "drm"
+    ],
+    "decoder_drops_max": 0,
+    "display_drops_total": 2,
+    "display_drops_added_in_observed_steady_window": 0,
+    "steady_window_seconds": [
+      5.1,
+      11.967
+    ],
+    "samples": [
+      {
+        "state": "playing",
+        "time_pos": 0.033,
+        "width": 3840,
+        "height": 2160,
+        "hwdec": "drm",
+        "dropped_frames": 0,
+        "vo_dropped_frames": 0,
+        "avsync": 0
+      },
+      {
+        "state": "playing",
+        "time_pos": 1.067,
+        "width": 3840,
+        "height": 2160,
+        "hwdec": "drm",
+        "dropped_frames": 0,
+        "vo_dropped_frames": 2,
+        "avsync": -0.001446
+      },
+      {
+        "state": "playing",
+        "time_pos": 2.033,
+        "width": 3840,
+        "height": 2160,
+        "hwdec": "drm",
+        "dropped_frames": 0,
+        "vo_dropped_frames": 2,
+        "avsync": -6.8e-05
+      },
+      {
+        "state": "playing",
+        "time_pos": 3.067,
+        "width": 3840,
+        "height": 2160,
+        "hwdec": "drm",
+        "dropped_frames": 0,
+        "vo_dropped_frames": 2,
+        "avsync": -3e-06
+      },
+      {
+        "state": "playing",
+        "time_pos": 4.067,
+        "width": 3840,
+        "height": 2160,
+        "hwdec": "drm",
+        "dropped_frames": 0,
+        "vo_dropped_frames": 2,
+        "avsync": 0
+      },
+      {
+        "state": "playing",
+        "time_pos": 5.1,
+        "width": 3840,
+        "height": 2160,
+        "hwdec": "drm",
+        "dropped_frames": 0,
+        "vo_dropped_frames": 2,
+        "avsync": 0
+      },
+      {
+        "state": "playing",
+        "time_pos": 6.1,
+        "width": 3840,
+        "height": 2160,
+        "hwdec": "drm",
+        "dropped_frames": 0,
+        "vo_dropped_frames": 2,
+        "avsync": 0
+      },
+      {
+        "state": "playing",
+        "time_pos": 11.967,
+        "width": 3840,
+        "height": 2160,
+        "hwdec": "drm",
+        "dropped_frames": 0,
+        "vo_dropped_frames": 2,
+        "avsync": 0
+      }
+    ]
+  },
+  "security_checks": [
+    "Readonly/unauthenticated/owner mismatch/private RPC denied",
+    "Traversal/root/internal destinations denied",
+    "Canceled partial never published",
+    "Duplicate target refused without overwrite",
+    "Exact uploaded bytes and size verified",
+    "Generated completed file removed via authenticated API"
+  ],
+  "limits": [
+    "No actual full4GiB HTTP transfer; >4GiB declared-size/cancel and >4GiB UI-offset tests passed",
+    "Short concurrent4K test is not a long-duration/4K60 claim",
+    "Only generated fixtures deleted; user files not used by automated tests"
+  ]
+}

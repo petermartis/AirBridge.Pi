@@ -11,6 +11,9 @@ Repository: **https://github.com/petermartis/AirBridge.Pi**
 - Full-screen LCD dashboard: CPU/RAM, SSID, management IP, Ethernet/AP status, bridge mode, client MAC addresses and signal.
 - User-confirmed display settings: **1 MHz**, explicitly addressed scanlines, **90° rotation plus a 320×240 viewport**.
 - Display and telemetry managed by OpenWrt `procd`, with startup enabled on the last verified deployment.
+- Native HDMI media add-on: mpv 0.42.0 + Pi FFmpeg 8.1.2, authenticated LuCI controls and exact-kernel HEVC/HDMI-codec add-ons. HEVC 3840×2160/30 picture and HDMI audio were physically confirmed. See [media setup and limits](docs/MEDIA.md); 4K60 and universal 4K codec performance are not claimed.
+- The media page includes multi-file upload with progress/cancel, free-space/file-size display, and confirmed permanent deletion. Transfers stream directly to media storage; unfinished uploads stay hidden and existing files are never silently replaced.
+- Playback profile matters: default **`quality4k` requires hardware video decoding**. Use **`balanced`** for H.264 1080p, other software-decoded codecs and audio-only files. Balanced still permits supported hardware decoding; it does not mean software-only.
 
 These are recorded observations, not a claim that a fresh OpenWrt installation has all this functionality. See [current status](docs/STATUS.md) for dates, limitations and unverified work.
 
@@ -42,11 +45,14 @@ The renderer also runs on macOS without hardware access:
 
 Cross-compilation requires a compatible OpenWrt SDK; see the development guide. Never deploy the macOS/native-test executable to the router.
 
+For the complete media/controller/LuCI host suite, also install host `json-c`, `pkg-config` and Node.js and run `make check-media`. This is hardware-free; device upload/delete and presentation benchmarks are separate opt-in operations. See [development and test boundaries](docs/DEVELOPMENT.md).
+
 ## Repository map
 - `openwrt/`: active Linux SPI/GPIO renderer, telemetry collector, procd service, tests and cross-build helper.
 - `openwrt/drivers/ma86xh/`: custom driver recipe, adaptation script, source snapshot, signed recovery package, public verification key and checksums.
 - `docs/`: CM5 architecture, wiring, development, operational state and recovery.
 - `tools/`: repository integrity/link/safety checks.
+- `media/`: media controller, private engine build/package tooling, exact kernel-source recovery and device validation records.
 - `legacy/esp32/`: archived Arduino/ESP-IDF application and speculative dual-ESP32 CAD. Not the current platform.
 
 ## Branding and compatibility

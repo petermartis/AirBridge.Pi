@@ -1,0 +1,3 @@
+# Recovery provenance hashes require these upstream patches to remain byte-exact.
+# Patch context intentionally contains tabs and space-only blank context lines.
+/media/kernel/patches/*.patch -whitespace

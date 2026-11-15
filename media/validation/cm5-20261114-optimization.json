@@ -1,0 +1,142 @@
+{
+  "platform": "CM5 Lite 4GB, OpenWrt25.12.6/kernel6.12.112",
+  "output": "3840x2160@30",
+  "video_and_graphics_resolution_reduced": false,
+  "frame_drop_detection_disabled": false,
+  "hardware_path": "V4L2 HEVC request -> DRM PRIME DMA-BUF -> VC4 primary scanout; GUI on transparent overlay",
+  "settings": {
+    "gpu-hwdec-interop": "drmprime-overlay",
+    "drm-draw-plane": "overlay",
+    "drm-drmprime-video-plane": "primary",
+    "drm-format": "xrgb8888"
+  },
+  "cause": "Default mpv video-overlay zpos0 conflicted with VC4 overlay minimum zpos1; swapping video/GUI plane roles avoids rejected atomic commits. Direct scanout avoids GPU video conversion.",
+  "visual_validation": "User confirmed clean 4K Main10 moving rectangle/grid is smooth and free of flashes; earlier coloured diagonal sweep was verified in the source test animation.",
+  "cases": {
+    "baseline-main10": {
+      "sample": "Test/4k-main10-30s.mkv",
+      "summary": {
+        "samples": 26,
+        "playing_samples": 26,
+        "steady_start_seconds": 5.933,
+        "steady_end_seconds": 24.9,
+        "hwdec_values": [
+          "drm"
+        ],
+        "resolutions": [
+          "3840x2160"
+        ],
+        "max_steady_abs_avsync": 0.000167,
+        "dropped_frames_at_steady_start": 0,
+        "dropped_frames_steady_delta": 0,
+        "dropped_frames_max": 0,
+        "vo_dropped_frames_at_steady_start": 39,
+        "vo_dropped_frames_steady_delta": 124,
+        "vo_dropped_frames_max": 163
+      }
+    },
+    "baseline-main": {
+      "sample": "Test/4k-main-30s.mkv",
+      "summary": {
+        "samples": 26,
+        "playing_samples": 26,
+        "steady_start_seconds": 5.033,
+        "steady_end_seconds": 25,
+        "hwdec_values": [
+          "drm"
+        ],
+        "resolutions": [
+          "3840x2160"
+        ],
+        "max_steady_abs_avsync": 0.000167,
+        "dropped_frames_at_steady_start": 0,
+        "dropped_frames_steady_delta": 0,
+        "dropped_frames_max": 0,
+        "vo_dropped_frames_at_steady_start": 11,
+        "vo_dropped_frames_steady_delta": 32,
+        "vo_dropped_frames_max": 43
+      }
+    },
+    "overlay-main10": {
+      "sample": "Test/4k-main10-30s.mkv",
+      "summary": {
+        "samples": 26,
+        "playing_samples": 26,
+        "steady_start_seconds": 5.033,
+        "steady_end_seconds": 25.033,
+        "hwdec_values": [
+          "drm"
+        ],
+        "resolutions": [
+          "3840x2160"
+        ],
+        "max_steady_abs_avsync": 0,
+        "dropped_frames_at_steady_start": 0,
+        "dropped_frames_steady_delta": 0,
+        "dropped_frames_max": 0,
+        "vo_dropped_frames_at_steady_start": 2,
+        "vo_dropped_frames_steady_delta": 0,
+        "vo_dropped_frames_max": 2
+      }
+    },
+    "overlay-main": {
+      "sample": "Test/4k-main-30s.mkv",
+      "summary": {
+        "samples": 26,
+        "playing_samples": 26,
+        "steady_start_seconds": 5,
+        "steady_end_seconds": 25,
+        "hwdec_values": [
+          "drm"
+        ],
+        "resolutions": [
+          "3840x2160"
+        ],
+        "max_steady_abs_avsync": 0.000167,
+        "dropped_frames_at_steady_start": 0,
+        "dropped_frames_steady_delta": 0,
+        "dropped_frames_max": 0,
+        "vo_dropped_frames_at_steady_start": 1,
+        "vo_dropped_frames_steady_delta": 0,
+        "vo_dropped_frames_max": 1
+      }
+    },
+    "persisted-r3-main10": {
+      "sample": "Test/4k-main10-30s.mkv",
+      "summary": {
+        "samples": 26,
+        "playing_samples": 26,
+        "steady_start_seconds": 5,
+        "steady_end_seconds": 25,
+        "hwdec_values": [
+          "drm"
+        ],
+        "resolutions": [
+          "3840x2160"
+        ],
+        "max_steady_abs_avsync": 0.000167,
+        "dropped_frames_at_steady_start": 0,
+        "dropped_frames_steady_delta": 0,
+        "dropped_frames_max": 0,
+        "vo_dropped_frames_at_steady_start": 1,
+        "vo_dropped_frames_steady_delta": 0,
+        "vo_dropped_frames_max": 1
+      }
+    }
+  },
+  "regressions": {
+    "h264_1080p_balanced": "Actual software decode and GPU presentation succeeded with decoder/display drops0 at sampled point",
+    "installed_versions": {
+      "airbridge-media": "1.0.0-r3",
+      "luci-app-airbridge-media": "1.0.0-r3"
+    },
+    "service_restart": "PersistedR3Main10retainedzero steady drops",
+    "looping_diagnostic_removed": true
+  },
+  "limits": [
+    "26statussamples per run; steady window begins at5seconds",
+    "1-2 startup display drops remain; not a universalzero-drop guarantee",
+    "4K60/HDR and long-duration/concurrentload tests not performed",
+    "No globalclock/governor changes or overclock applied"
+  ]
+}

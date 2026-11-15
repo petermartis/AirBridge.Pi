@@ -1,0 +1,22 @@
+{
+  "zlib": {"version":"1.3.1","url":"https://zlib.net/fossils/zlib-1.3.1.tar.gz"},
+  "expat": {"version":"2.6.4","url":"https://github.com/libexpat/libexpat/releases/download/R_2_6_4/expat-2.6.4.tar.xz"},
+  "libdrm": {"version":"2.4.124","url":"https://dri.freedesktop.org/libdrm/libdrm-2.4.124.tar.xz"},
+  "libudev-zero": {"version":"1.0.3","url":"https://codeload.github.com/illiliti/libudev-zero/tar.gz/refs/tags/1.0.3"},
+  "alsa-lib": {"version":"1.2.13","url":"https://www.alsa-project.org/files/pub/lib/alsa-lib-1.2.13.tar.bz2"},
+  "freetype": {"version":"2.13.3","url":"https://download.savannah.gnu.org/releases/freetype/freetype-2.13.3.tar.xz"},
+  "fribidi": {"version":"1.0.16","url":"https://github.com/fribidi/fribidi/releases/download/v1.0.16/fribidi-1.0.16.tar.xz"},
+  "harfbuzz": {"version":"10.4.0","url":"https://github.com/harfbuzz/harfbuzz/releases/download/10.4.0/harfbuzz-10.4.0.tar.xz"},
+  "libass": {"version":"0.17.3","url":"https://github.com/libass/libass/releases/download/0.17.3/libass-0.17.3.tar.xz"},
+  "dav1d": {"version":"1.5.4","url":"https://codeload.github.com/videolan/dav1d/tar.gz/refs/tags/1.5.4"},
+  "libdisplay-info": {"version":"0.2.0","url":"https://gitlab.freedesktop.org/emersion/libdisplay-info/-/archive/0.2.0/libdisplay-info-0.2.0.tar.gz"},
+  "mesa": {"version":"25.0.7","url":"https://archive.mesa3d.org/mesa-25.0.7.tar.xz"},
+  "vulkan-headers": {"version":"1.4.304","url":"https://codeload.github.com/KhronosGroup/Vulkan-Headers/tar.gz/refs/tags/v1.4.304"},
+  "libplacebo": {"version":"7.387.0","url":"https://codeload.github.com/haasn/libplacebo/tar.gz/refs/tags/v7.387.0"},
+  "ffmpeg": {"version":"rpi-8.1.2-f60aae17021abae85b1ba9759e8b2da33f723902","url":"https://codeload.github.com/jc-kynesim/rpi-ffmpeg/tar.gz/f60aae17021abae85b1ba9759e8b2da33f723902"},
+  "mpv": {"version":"0.42.0-b0841e8c4d156b8403dc1876c4cbd9011eb583f3","url":"https://codeload.github.com/mpv-player/mpv/tar.gz/b0841e8c4d156b8403dc1876c4cbd9011eb583f3"},
+  "fonts": {"version":"2.37","url":"https://github.com/dejavu-fonts/dejavu-fonts/releases/download/version_2_37/dejavu-fonts-ttf-2.37.tar.bz2"},
+  "json-c": {"version":"0.18","url":"https://s3.amazonaws.com/json-c_releases/releases/json-c-0.18.tar.gz"},
+  "libubox": {"version":"7dd127841e82eb1cfb61185da37dde7b9bd9ba6d","url":"https://codeload.github.com/openwrt/libubox/tar.gz/7dd127841e82eb1cfb61185da37dde7b9bd9ba6d"},
+  "ubus": {"version":"24864e7840b3a02a9ef76284a373f6b2f00b8a9b","url":"https://codeload.github.com/openwrt/ubus/tar.gz/24864e7840b3a02a9ef76284a373f6b2f00b8a9b"}
+}

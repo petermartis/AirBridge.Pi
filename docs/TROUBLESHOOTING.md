@@ -67,6 +67,52 @@ The NVMe attempt never cloned or formatted a disk and never changed EEPROM prior
 
 Last boot order was `0xf2461` (SD before NVMe). CM5 EEPROM programming differs from ordinary Raspberry Pi boards; verify a supported CM5 procedure before changing it. Keep SD recovery intact. An SSD kernel/runtime failure is not guaranteed to fall back automatically.
 
+## Media playback: collect state before changing policy
+The UI is **Services → AirBridge.Pi Media**, `/cgi-bin/luci/admin/services/airbridge-media`. With an already authenticated device shell, capture targeted read-only facts:
+```sh
+ubus call airbridge.media status '{}'
+ubus call airbridge.media storage '{}'
+ubus call service list '{"name":"airbridge-media"}'
+uci -q get airbridge-media.main.enabled
+uci -q get airbridge-media.main.root
+df -h / /boot /mnt/media
+mount
+apk info airbridge-media airbridge-media-engine luci-app-airbridge-media
+ls -l /dev/dri /dev/snd
+logread -e airbridge-media
+```
+Review/redact media titles and unrelated mount/log details before sharing. A successful ubus transport exit is not a successful operation: check response `ok` and `error`. `available:true` only means player IPC answered; it does not prove visible picture or audible sound.
+
+### H.264 sample will not play
+Default `quality4k` means **require hardware video decoding**, not “best quality for every file.” The CM5 has the validated HEVC hardware path, but this H.264 path is software-decoded. In the page select Profile **`balanced`**, wait for the control request to finish, then press Play again. `quiet` also permits software but limits threads to two. Balanced still tries supported hardware decoding; it does not disable HEVC acceleration.
+
+`1080p-h264-fallback.mp4` previously played under Balanced with zero observed decoder/display drops. The user reported another failure on 2026-11-15; the strict profile is a likely cause, **not a newly verified diagnosis**. SSH authentication had expired, so current status/error could not be read and a successful retry has not been reported. If Balanced still fails, retain the exact UI/backend error and inspect codec/container, selected path, file completeness, service and mount rather than declaring it fixed.
+
+Profile selection and the queue are not persisted: restarting the controller returns to `quality4k`. Audio-only files also cannot satisfy its hardware-video check. There is no automatic per-file profile switch. Do not silently weaken the strict profile or mislabel software decoding as hardware.
+
+### Engine unavailable, no HDMI picture, or stutter
+- **Unavailable:** check whether the add-on is enabled, both procd instances exist, the root mounted before controller startup, and private runtime/config dependencies are present. A newly installed package defaults disabled. Replacing/remounting the root requires a controlled service restart because descriptors are retained.
+- **HEVC hardware rejected:** inspect exact-release module loading, V4L2 and DRM availability. `/dev/video19` was observed but numbering is not a universal contract. Do not force module ABI compatibility or install a newer kernel.
+- **No picture/audio despite playing:** verify display input/cable/connector, another DRM owner, selected audio track, TV/player mute and ALSA HDMI mapping. Do not repeat old sysfs GPU-binding trials as routine recovery.
+- **Stutter:** compare both `dropped_frames` (decoder) and `vo_dropped_frames` (presentation) across time. One or two startup display drops occurred in accepted runs; sustained increases are different. Preserve `drmprime-overlay`, video-primary/GUI-overlay mapping, full-size 4K and the 4K30 mode. The prior reversed plane assignment caused atomic commits to fail. Do not hide counters, downscale, overclock or change global governors to claim improvement.
+
+See [the media runbook](MEDIA.md) for exact configuration, signed versions, module dependencies, benchmark methodology and rollback. Short HEVC clips do not establish 4K60, HDR, every codec or full-film thermal stability.
+
+## Media upload/delete failures
+- **Controls disabled:** both user write permission and backend storage readiness are required. Read-only sessions may browse/read storage but must not upload/delete. Engine availability and file-operation busy state are separate.
+- **Storage unavailable/read-only:** inspect `storage.reason`, mount identity/options and free/usable space. Writes require the configured actual dedicated ext4 filesystem-root mount. Do not bypass the root/boot/tmpfs/submount guards or upload into an unmounted `/mnt/media` directory on root.
+- **Insufficient space:** usable capacity excludes the 256 MiB reserve and outstanding logical reservations. There are two upload slots. Canceled in-flight workers may retain a slot until acknowledgment/lease expiry; inactivity expires at 900 seconds.
+- **Duplicate:** publication never overwrites an existing filename. Refresh first, then choose a different local filename or explicitly delete the correct existing file after confirmation.
+- **Cancel/disconnect/final error:** refresh the directory before retrying. Completed files remain, and a lost final acknowledgment or post-publication directory-sync error can leave a complete published file. Do not infer from a timeout that no file exists.
+- **Delete says Stop first:** use Stop even if the clip already reached EOF; the controller still holds the inode. Directory/recursive delete, rename, folder creation and arbitrary path management are not implemented.
+- **Unrecognized staging/quarantine:** preserve `.airbridge-upload` for investigation. Unknown entries and interrupted-delete quarantine can intentionally block writes. Never “fix” this by recursively deleting staging or user media.
+- **Browser upload regression:** keep LuCI's Blob-returning content callback and query-free URL behavior (`cache:true`); native CGI replies need `Status: CODE REASON`, not bare status numbers. Backend R5/UI R4 contain these compatibility fixes. Never move bearer/session/capability values into a URL, browser DOM or logs.
+
+No reboot, filesystem repair or general filesystem-write ACL is a routine response to an upload error. File/CGI transport details are in the [controller contract](../media/controller/README.md). Device write tests are opt-in and operate on generated fixtures only.
+
+### SD capacity and recovery caveat
+The root partition reserves 512 MiB but its filesystem remains about 128 MiB; media p3 supplies about 58.6 GiB. Root online growth hit the reserved-GDT issue. Do not rerun online resize, repair a mounted filesystem or use loop aliases to evade checks. The private initialized-SD backup predates p3: restoring its MBR blindly hides the current media partition. Preserve the current layout and separately review any offline repair/restoration.
+
 ## Private artifact locations on the prototype
 - `/root/ma86xh-backup-20261106/`: original configs, old packages, traces and saved bandwidth configurations.
 - `/root/airbridge-lcd-backup/`: original boot config and original display binary.
