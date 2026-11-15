@@ -1,0 +1,111 @@
+{
+  "platform": "CM5 Lite 4GB, OpenWrt25.12.6/kernel6.12.112",
+  "output": "3840x2160@30, HDMI RGB 8 bpc limited range",
+  "report": "Tiny green noise in dark scenes of a user-supplied 720x576 25 fps H.264 High (BT.601 limited, yuv420p) film under the balanced profile",
+  "path": "software decode (hwdec no) -> vo=gpu OpenGL -> ARGB8888 4K draw surface on the VC4 overlay plane; DRM PRIME video plane disabled",
+  "method": "Read-only dump of the scanout framebuffer through DRM GETFB2/PRIME while paused on dark frames, compared with a reference conversion of the same source frames. Runtime settings were changed only through the private player socket, then reset; temporary tools were removed from /tmp.",
+  "cause": "Present in the source: near-black is encoded around Y 17-18 with U=V=129 (magenta-tinted black) and scattered lower chroma samples that decode to green-dominant pixels. The player reproduced them unfiltered, with bilinear 3.75x enlargement, dithering off and no deband. Framebuffer alpha was 255 everywhere and the conversion matched the reference, so overlay blending and colour-matrix errors were ruled out.",
+  "measure": "Fraction of dark framebuffer pixels (max channel <= 24, pillarbox included) with G - max(R,B) >= 2",
+  "frame_111.88s": {
+    "installed_r5": 0.005507,
+    "shader_only": 0.000702,
+    "shader_and_dither_fruit": 0.000627,
+    "strong_green_samples_ge3_before": 2222,
+    "strong_green_samples_ge3_after": 6,
+    "installed_r6_and_r7": 0.000627
+  },
+  "frame_4200.96s": {
+    "installed_r5": 0.005952,
+    "after": "not recorded: the post-change capture did not land on the same frame"
+  },
+  "presentation": {
+    "decoder_drops": 0,
+    "shader_only_20s": {
+      "vo_dropped_frames_delta": 0
+    },
+    "shader_and_dither_fruit_15s": {
+      "vo_dropped_frames_delta": 0
+    },
+    "shader_and_dither_ordered_15s": {
+      "vo_dropped_frames_delta": 0
+    },
+    "rejected_scale_spline36_20s": {
+      "vo_dropped_frames_delta": 205
+    },
+    "rejected_scale_mitchell_15s": {
+      "vo_dropped_frames_delta": 84
+    },
+    "r6_regression_1080p_h264_7s": {
+      "full_49_sample_shader_vo_drops": [
+        35,
+        42,
+        42
+      ],
+      "sparse_12_sample_shader_vo_drops": [
+        12,
+        13
+      ],
+      "no_shader_no_dither_vo_drops": 0,
+      "dither_only_vo_drops_at_2s_and_7s_8_runs": [
+        "2/2",
+        "1/1",
+        "1/1",
+        "1/1",
+        "1/1",
+        "0/0",
+        "2/2",
+        "1/1"
+      ],
+      "resolution": "r7 limits the shader to SD sources with a WHEN condition"
+    }
+  },
+  "selected": {
+    "dither": "fruit",
+    "glsl-shaders": "/etc/airbridge-media/dark-chroma.glsl",
+    "scale": "bilinear (unchanged)"
+  },
+  "not_covered": [
+    "No user confirmation on the physical TV yet",
+    "Green measurement is one paused frame of one film; drop windows are 7-30 s",
+    "25 fps content on the 30 Hz mode still judders",
+    "Sources above SD get dithering only; zero-copy hardware HEVC frames get neither",
+    "Residual magenta tint of the source black is left as encoded",
+    "Dithering produced 0-2 startup display drops on 1080p in the r6-era runtime trial; the installed r7 showed none in six runs"
+  ],
+  "installed_r7": {
+    "package": "airbridge-media-1.0.0-r7.apk",
+    "sha256": "1047197d8267b891bd01921bc7fed0f9aeb9785436ebfdebe9068a0ad70eb21a",
+    "contents": "r5 controller/launcher/upload binaries byte-identical; new mpv.conf and dark-chroma.glsl. Only this package was signed; the other four APKs were carried over byte-for-byte.",
+    "transaction": "single-package upgrade r5 -> r6 -> r7, media service restart, no reboot",
+    "active_settings_read_back": {
+      "dither": "fruit",
+      "glsl-shaders": [
+        "/etc/airbridge-media/dark-chroma.glsl"
+      ],
+      "scale": "bilinear"
+    },
+    "sd_film_30s": {
+      "decoder_drops": 0,
+      "vo_dropped_frames": 0
+    },
+    "1080p_h264_balanced_6_runs_7s_each": {
+      "decoder_drops": 0,
+      "vo_dropped_frames": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "4k_hevc_main10_quality4k_25s": {
+      "hwdec": "drm",
+      "decoder_drops": 0,
+      "vo_dropped_frames": 0
+    },
+    "unchanged": "Wi-Fi 80 MHz channel 37, repair Y / trace N, LCD service running, media enabled=1 preserved",
+    "config_backup_on_device": "/root/airbridge-media-r5-config-20261115"
+  },
+  "follow_up": "User still saw green specks on the TV with r7 at 4K output; they were gone at 1080p output. An offline simulation of the shader on 40 film frames left about 27 % of specks (9,712 -> 2,620). See cm5-20261115-output-mode.json."
+}

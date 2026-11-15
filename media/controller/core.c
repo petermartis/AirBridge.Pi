@@ -168,6 +168,7 @@ int media_init(struct media *m, const char *root, const char *socket_path)
 	signal(SIGPIPE, SIG_IGN);
 	snprintf(m->socket_path, sizeof(m->socket_path), "%s", socket_path);
 	snprintf(m->profile, sizeof(m->profile), "quality4k");
+	snprintf(m->soft_mode, sizeof(m->soft_mode), "1920x1080@30");
 	media_files_init(m,root);
 	return 0;
 }
@@ -406,12 +407,108 @@ static int profile(struct media *m, const char *name)
 	snprintf(m->profile,sizeof(m->profile),"%s",selected);
 	return 0;
 }
+/* Output mode for files that may be software decoded. Only 1080p modes at
+ * 24/25/30 Hz are used: on the validated setup 4K GPU-rendered output flashed
+ * and 1080p50 corrupted picture and audio, while these low-rate modes were clean. */
+static const char *output_mode(double fps)
+{
+	if (!(fps > 1.0) || fps > 1000.0) return "1920x1080@30";
+	while (fps > 31.0) fps /= 2.0;
+	while (fps < 20.0) fps *= 2.0;
+	if (fabs(fps - 23.976) < 0.02) return "1920x1080@23.98";
+	if (fabs(fps - 24.0) < 0.3) return "1920x1080@24";
+	if (fabs(fps - 25.0) < 0.3) return "1920x1080@25";
+	if (fabs(fps - 29.97) < 0.02) return "1920x1080@29.97";
+	return "1920x1080@30";
+}
+/* Frame rate of the first real video track: -1 without one, 0 if unknown. */
+static double video_fps(struct media *m)
+{
+	struct json_object *tracks = get(m,"track-list"), *v;
+	double fps = -1;
+	if (tracks && json_object_is_type(tracks,json_type_array)) {
+		for (size_t i = 0; i < json_object_array_length(tracks) && fps < 0; ++i) {
+			struct json_object *t = json_object_array_get_idx(tracks,i);
+			const char *type = strarg(t,"type");
+			if (!type || strcmp(type,"video")) continue;
+			if ((json_object_object_get_ex(t,"image",&v) && json_object_get_boolean(v)) ||
+			    (json_object_object_get_ex(t,"albumart",&v) && json_object_get_boolean(v))) continue;
+			fps = json_object_object_get_ex(t,"demux-fps",&v) ? json_object_get_double(v) : 0;
+		}
+	}
+	if (tracks) json_object_put(tracks);
+	return fps;
+}
+static int wait_true(struct media *m, const char *property, int ms)
+{
+	long long deadline = now_ms() + ms;
+	while (now_ms() < deadline && !m->error[0]) {
+		struct json_object *v = get(m,property);
+		int yes = v && json_object_get_boolean(v);
+		if (v) json_object_put(v);
+		if (yes) return 1;
+		struct timespec delay = {0, 50000000};
+		nanosleep(&delay,NULL);
+	}
+	return 0;
+}
+/* Reopen the display of the loaded, paused file in another mode. The mode is
+ * only read when the video output opens; changing "wid" (unused by DRM) makes
+ * the player close and reopen it without reloading the file. */
+static int reopen_output(struct media *m, const char *mode)
+{
+	struct json_object *wid = get(m,"wid");
+	long long next = wid && json_object_get_int64(wid) == 0 ? 1 : 0;
+	if (wid) json_object_put(wid);
+	if (set(m,"drm-mode",json_object_new_string(mode)) ||
+	    set(m,"wid",json_object_new_int64(next))) return 0;
+	return wait_true(m,"vo-configured",1500);
+}
+static int number_property(struct media *m, const char *name, double *value)
+{
+	struct json_object *v = get(m,name);
+	int ok = v && (json_object_is_type(v,json_type_int) || json_object_is_type(v,json_type_double));
+	if (ok) *value = json_object_get_double(v);
+	if (v) json_object_put(v);
+	return ok;
+}
+/* Compare the mode the display really has open with "WxH@R" (a 23.98 Hz
+ * mode reports 23.976, so the tolerance must still separate it from 24 Hz). The drm-mode
+ * option only says what was requested: an output left open by the previous
+ * file keeps its old mode, which once put a 4K film on a 1080p output. */
+static int output_matches(struct media *m, const char *mode)
+{
+	int w = 0, h = 0;
+	double hz = 0, dw, dh, dhz;
+	if (sscanf(mode,"%dx%d@%lf",&w,&h,&hz) != 3) return 0;
+	return number_property(m,"display-width",&dw) && number_property(m,"display-height",&dh) &&
+		number_property(m,"display-fps",&dhz) &&
+		(int)dw == w && (int)dh == h && fabs(dhz - hz) < 0.012;
+}
+/* Wait for the display of the loaded, paused file and make it use this mode. */
+static int ensure_output(struct media *m, const char *mode)
+{
+	if (wait_true(m,"vo-configured",1500) && output_matches(m,mode)) return 1;
+	if (m->error[0]) return 0;
+	return reopen_output(m,mode) && output_matches(m,mode);
+}
+static struct json_object *play_file(struct media *m, const char *path, int match_rate);
 static struct json_object *play(struct media *m, const char *path)
+{
+	return play_file(m,path,1);
+}
+static struct json_object *play_file(struct media *m, const char *path, int match_rate)
 {
 	int fd = localopen(m,path,0);
 	char fdpath[80];
 	if (fd < 0) return result("local media unavailable or forbidden");
 	if (profile(m,m->profile)) { close(fd); return result("player unavailable or profile unsupported"); }
+	int required_hw = !strcmp(m->profile,"quality4k");
+	/* The display mode is fixed when the video output opens, so choose it first. */
+	if (set(m,"drm-mode",json_object_new_string(required_hw ? "3840x2160@30" :
+	    match_rate ? m->soft_mode : "1920x1080@30"))) {
+		close(fd); return result("player unavailable or profile unsupported");
+	}
 	snprintf(fdpath,sizeof(fdpath),"/proc/%ld/fd/%d",(long)getpid(),fd);
 	struct json_object *a = cmd("loadfile"), *opts = json_object_new_object(), *reply;
 	json_object_array_add(a,json_object_new_string(fdpath));
@@ -433,7 +530,8 @@ static struct json_object *play(struct media *m, const char *path)
 	/* Loading is asynchronous; quality4k remains paused until a hardware
 	 * decoder is reported for this exact opened file, or fails closed. */
 	if (!strcmp(m->profile,"quality4k")) {
-		long long deadline = now_ms() + 4000;
+		long long deadline = now_ms() + 5500;
+		int output_checked = 0;
 		while (now_ms() < deadline) {
 			struct json_object *loaded = get(m,"path");
 			struct json_object *hw = get(m,"hwdec-current");
@@ -443,6 +541,15 @@ static struct json_object *play(struct media *m, const char *path)
 			if (loaded) json_object_put(loaded);
 			if (hw) json_object_put(hw);
 			if (active && !m->error[0]) {
+				if (!output_checked) {
+					/* May reopen the output; verify the decoder again afterwards. */
+					output_checked = 1;
+					if (!ensure_output(m,"3840x2160@30")) {
+						if (!m->error[0]) snprintf(m->error,sizeof(m->error),"display output mode unavailable");
+						break;
+					}
+					continue;
+				}
 				if (set(m,"pause",json_object_new_boolean(0))) goto hwfail;
 				return result(m->error[0] ? m->error : NULL);
 			}
@@ -457,6 +564,38 @@ hwfail:
 			stop_reason(m,reason);
 		} else stop_reason(m,"quality4k requires an active hardware decoder");
 		return result(m->error);
+	}
+	/* Loading is asynchronous: unpausing before the file is loaded can leave it
+	 * paused at the start, because the load applies its own pause option. */
+	long long deadline = now_ms() + 2500;
+	int loaded_ok = 0;
+	while (now_ms() < deadline && !m->error[0] && !loaded_ok) {
+		struct json_object *loaded = get(m,"path");
+		loaded_ok = m->file_loaded && loaded && !strcmp(json_object_get_string(loaded),fdpath);
+		if (loaded) json_object_put(loaded);
+		if (!loaded_ok) { struct timespec delay = {0, 50000000}; nanosleep(&delay,NULL); }
+	}
+	if (!loaded_ok || m->error[0]) {
+		if (!m->error[0]) stop_reason(m,"player did not load media");
+		else { char reason[160]; snprintf(reason,sizeof(reason),"%.150s",m->error); stop_reason(m,reason); }
+		return result(m->error);
+	}
+	double fps = video_fps(m);
+	if (fps >= 0) {
+		const char *mode = match_rate ? output_mode(fps) : "1920x1080@30";
+		if (!ensure_output(m,mode)) {
+			/* The display may not offer the matched mode: retry once at 30 Hz. */
+			if (match_rate && strcmp(mode,"1920x1080@30")) {
+				simple(m,"stop");
+				m->error[0]=0;
+				m->deadline = now_ms() + 6500;
+				return play_file(m,path,0);
+			}
+			if (!m->error[0]) stop_reason(m,"display output mode unavailable");
+			else { char reason[160]; snprintf(reason,sizeof(reason),"%.150s",m->error); stop_reason(m,reason); }
+			return result(m->error);
+		}
+		if (match_rate) snprintf(m->soft_mode,sizeof(m->soft_mode),"%s",mode);
 	}
 	if (set(m,"pause",json_object_new_boolean(0))) return result("player pause reset failed");
 	return result(m->error[0] ? m->error : NULL);

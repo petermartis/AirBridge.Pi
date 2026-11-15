@@ -1,7 +1,7 @@
 {
   "packages": {
     "airbridge-media-engine-1.0.0-r1.apk": "96a8ac0f139c69a4aaf17c61f027c89f6f0659416ada5797874664c891d92393",
-    "airbridge-media-1.0.0-r5.apk": "ffe51ff11f89b3204195ebb45194ba59a4715edab8ad80c4796ed5d06e7c2b79",
+    "airbridge-media-1.0.0-r10.apk": "fcbf485093fdd01bbdfdf958186cf02a309977b184faafa20604057b60a25e38",
     "luci-app-airbridge-media-1.0.0-r4.apk": "25238a67588f1609ad41b6c7ff57aee494c65426025ae032511ece2e20b4afc8",
     "kmod-airbridge-hevc-1.0.0-r1.apk": "67322f59d525aa0979f62bcef929d7f8c44a39d50fd82bc0ed395b085830879f",
     "kmod-airbridge-hdmi-codec-1.0.0-r1.apk": "43ed77a815997993b11bc9fa38d12c3f8511949aa8bb2656d19c00465132ea4d",

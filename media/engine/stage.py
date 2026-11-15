@@ -97,7 +97,8 @@ def main():
     for name, dest in [
         ("airbridge-media.init", "etc/init.d/airbridge-media"),
         ("airbridge-media.config", "etc/config/airbridge-media"),
-        ("mpv.conf", "etc/airbridge-media/mpv.conf")]:
+        ("mpv.conf", "etc/airbridge-media/mpv.conf"),
+        ("dark-chroma.glsl", "etc/airbridge-media/dark-chroma.glsl")]:
         target = controller / dest
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(files / name, target)

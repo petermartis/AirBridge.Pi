@@ -30,9 +30,16 @@ class FakeIPC:
         self.queued_event = None
         self.send_loaded = True
         self.load_error = False
+        self.bad_modes = set()
+        self.has_video = False
+        self.opened_mode = None
+        self.reopens = 0
+        self.vo_open = False
+        self.slow_vo_close = False
         self.properties = {
             "time-pos": 12.5, "duration": 120, "volume": 50, "mute": False,
-            "track-list": [{"id": 1, "type": "audio", "lang": "eng", "selected": True}],
+            "track-list": [{"id": 1, "type": "video", "demux-fps": 24, "selected": True},
+                           {"id": 1, "type": "audio", "lang": "eng", "selected": True}],
             "video-codec": "hevc", "width": 3840, "height": 2160,
             "decoder-frame-drop-count": 2, "avsync": 0.002,
         }
@@ -88,6 +95,18 @@ class FakeIPC:
                             data = self.loaded
                         elif name == "pause":
                             data = self.pause
+                        elif name in ("display-width", "display-height", "display-fps"):
+                            if self.idle or not self.has_video or not self.opened_mode:
+                                error = "property unavailable"
+                            else:
+                                size, rate = self.opened_mode.split("@")
+                                width, height = size.split("x")
+                                # Real displays report e.g. 23.976081 for a 23.98 mode.
+                                data = {"display-width": int(width), "display-height": int(height),
+                                        "display-fps": float(rate) + 0.004}[name]
+                        elif name == "vo-configured":
+                            data = (not self.idle and self.has_video and
+                                    self.opened_mode not in self.bad_modes)
                         elif name in self.properties:
                             data = self.properties[name]
                         else:
@@ -95,12 +114,22 @@ class FakeIPC:
                     elif command[0] == "set_property":
                         if command[1] == "pause":
                             self.pause = command[2]
+                        elif command[1] == "wid":
+                            # The display reopens, reading the mode option again.
+                            self.properties["wid"] = command[2]
+                            self.opened_mode = self.properties.get("drm-mode")
+                            self.reopens += 1
                         else:
                             self.properties[command[1]] = command[2]
                     elif command[0] == "loadfile":
                         self.loaded = command[1]
                         self.idle = False
                         self.pause = command[4]["pause"] == "yes"
+                        self.has_video = any(t.get("type") == "video" for t in self.properties["track-list"])
+                        # A display left open by the previous file keeps its mode.
+                        if not self.vo_open:
+                            self.opened_mode = self.properties.get("drm-mode")
+                        self.vo_open = self.has_video
                         if self.load_error:
                             self.idle = True
                             conn.sendall(b'{"event":"end-file","reason":"error","file_error":"unrecognized file format"}\n')
@@ -108,6 +137,8 @@ class FakeIPC:
                             conn.sendall(b'{"event":"file-loaded"}\n')
                     elif command[0] == "stop":
                         self.idle = True
+                        # The real player closes its display a moment after stop.
+                        self.vo_open = self.vo_open and self.slow_vo_close
                     payload = json.dumps({"request_id": request["request_id"],
                                           "error": error, "data": data}).encode() + b"\n"
                     conn.sendall(b'{"event":"idle"}\n' + payload[:7])
@@ -316,6 +347,113 @@ class ControllerTests(unittest.TestCase):
         self.assertFalse(self.call("play", path="movie.mkv")["ok"])
         self.assertEqual(self.fake.commands[-1], ["stop"])
         self.assertFalse(self.call("pause", paused=False)["ok"])
+
+    def software_play(self, fps):
+        self.fake.hardware = "no"
+        self.fake.properties["track-list"] = [
+            {"id": 1, "type": "video", "albumart": True, "image": True, "demux-fps": 1},
+            {"id": 2, "type": "video", "demux-fps": fps},
+            {"id": 1, "type": "audio", "selected": True}]
+        self.assertTrue(self.call("profile", name="balanced")["ok"])
+        self.fake.commands.clear()
+        return self.call("play", path="movie.mkv")
+
+    def test_output_mode_follows_frame_rate(self):
+        for fps, mode in [(25, "1920x1080@25"), (50, "1920x1080@25"), (23.976, "1920x1080@23.98"),
+                          (24, "1920x1080@24"), (29.97, "1920x1080@29.97"), (59.94, "1920x1080@29.97"),
+                          (30, "1920x1080@30"), (60, "1920x1080@30"), (12.5, "1920x1080@25"),
+                          (0, "1920x1080@30"), (1e9, "1920x1080@30")]:
+            self.assertTrue(self.software_play(fps)["ok"], fps)
+            self.assertEqual(self.fake.opened_mode, mode, fps)
+            self.assertFalse(any(c[:2] == ["set_property", "drm-mode"] and "3840" in c[2]
+                                 for c in self.fake.commands))
+
+    def test_same_rate_reuses_open_display(self):
+        self.assertTrue(self.software_play(25)["ok"])
+        reopens = self.fake.reopens
+        self.assertTrue(self.software_play(25)["ok"])
+        self.assertEqual(self.fake.reopens, reopens)
+        self.assertEqual(self.fake.opened_mode, "1920x1080@25")
+
+    def test_display_is_ready_before_unpause(self):
+        self.assertTrue(self.software_play(25)["ok"])
+        names = [c[0] if c[0] != "set_property" else (c[1], c[2]) for c in self.fake.commands]
+        load = next(c for c in self.fake.commands if c[0] == "loadfile")
+        self.assertEqual(load[4], {"demuxer": "lavf", "demuxer-lavf-format": "matroska",
+                                  "access-references": "no", "pause": "yes"})
+        order = [names.index("loadfile"), names.index(("drm-mode", "1920x1080@25")),
+                 names.index(("pause", False))]
+        self.assertEqual(order, sorted(order))
+        self.assertEqual(self.call("status")["state"], "playing")
+
+    def test_video_only_file_plays(self):
+        self.fake.hardware = "no"
+        self.fake.properties["track-list"] = [{"id": 1, "type": "video", "demux-fps": 30}]
+        self.assertTrue(self.call("profile", name="balanced")["ok"])
+        self.assertTrue(self.call("play", path="movie.mkv")["ok"])
+        self.assertEqual(self.fake.opened_mode, "1920x1080@30")
+
+    def test_output_mode_fallback_and_failure(self):
+        self.fake.bad_modes = {"1920x1080@25"}
+        self.assertTrue(self.software_play(25)["ok"])
+        self.assertEqual(self.fake.opened_mode, "1920x1080@30")
+        self.assertEqual(sum(c[0] == "loadfile" for c in self.fake.commands), 2)
+        self.fake.bad_modes = {"1920x1080@25", "1920x1080@30"}
+        result = self.software_play(25)
+        self.assertFalse(result["ok"])
+        self.assertIn("display output mode unavailable", result["error"])
+        self.assertEqual(self.fake.commands[-1], ["stop"])
+        self.assertFalse(any(c == ["set_property", "pause", False] for c in self.fake.commands))
+
+    def test_software_load_must_complete_before_unpause(self):
+        self.fake.send_loaded = False
+        result = self.software_play(25)
+        self.assertFalse(result["ok"])
+        self.assertIn("did not load", result["error"])
+        self.assertFalse(any(c == ["set_property", "pause", False] for c in self.fake.commands))
+
+    def test_audio_only_has_no_display_wait(self):
+        self.fake.hardware = "no"
+        self.fake.properties["track-list"] = [{"id": 1, "type": "audio", "selected": True}]
+        self.assertTrue(self.call("profile", name="balanced")["ok"])
+        self.fake.commands.clear()
+        self.assertTrue(self.call("play", path="movie.mkv")["ok"])
+        self.assertEqual(self.fake.reopens, 0)
+        self.assertIn(["set_property", "pause", False], self.fake.commands)
+
+    def test_required_hardware_keeps_4k_mode(self):
+        self.assertTrue(self.software_play(25)["ok"])
+        self.fake.hardware = "drm"
+        self.assertTrue(self.call("profile", name="quality4k")["ok"])
+        self.assertTrue(self.call("play", path="movie.mkv")["ok"])
+        self.assertEqual(self.fake.opened_mode, "3840x2160@30")
+
+    def test_stale_display_is_reopened_for_4k(self):
+        self.fake.slow_vo_close = True
+        self.assertTrue(self.software_play(25)["ok"])
+        self.assertEqual(self.fake.opened_mode, "1920x1080@25")
+        self.fake.hardware = "drm"
+        self.assertTrue(self.call("profile", name="quality4k")["ok"])
+        self.fake.commands.clear()
+        self.assertTrue(self.call("play", path="movie.mkv")["ok"])
+        self.assertEqual(self.fake.opened_mode, "3840x2160@30")
+        names = [c[0] if c[0] != "set_property" else (c[1], c[2]) for c in self.fake.commands]
+        reopen = next(i for i, n in enumerate(names) if isinstance(n, tuple) and n[0] == "wid")
+        self.assertLess(reopen, names.index(("pause", False)))
+
+    def test_stale_4k_display_is_reopened_for_software(self):
+        self.fake.slow_vo_close = True
+        self.assertTrue(self.call("play", path="movie.mkv")["ok"])
+        self.assertEqual(self.fake.opened_mode, "3840x2160@30")
+        self.assertTrue(self.software_play(30)["ok"])
+        self.assertEqual(self.fake.opened_mode, "1920x1080@30")
+
+    def test_4k_display_unavailable_fails_closed(self):
+        self.fake.bad_modes = {"3840x2160@30"}
+        result = self.call("play", path="movie.mkv")
+        self.assertFalse(result["ok"])
+        self.assertEqual(self.fake.commands[-1], ["stop"])
+        self.assertFalse(any(c == ["set_property", "pause", False] for c in self.fake.commands))
 
     def test_queue(self):
         self.assertEqual(self.call("queue", action="list")["entries"], [])

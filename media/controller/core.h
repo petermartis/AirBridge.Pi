@@ -9,7 +9,7 @@ struct media {
 	int rootfd, mediafd, ipcfd, file_loaded;
 	unsigned request_id;
 	long long deadline;
-	char socket_path[108], profile[16], title[1024], error[256];
+	char socket_path[108], profile[16], soft_mode[24], title[1024], error[256];
 	char queue[128][1024];
 	size_t queue_len;
 	size_t readlen;

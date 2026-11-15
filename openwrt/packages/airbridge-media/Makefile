@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=airbridge-media
 PKG_VERSION:=1.0.0
-PKG_RELEASE:=5
+PKG_RELEASE:=10
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 # This recipe is copied into an SDK package directory by the lead's build
 # helper. Explicit source path avoids assuming the SDK's working directory.
@@ -82,6 +82,7 @@ define Package/airbridge-media/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/airbridge-media-player $(1)/usr/libexec/
 	$(INSTALL_CONF) ./files/airbridge-media.config $(1)/etc/config/airbridge-media
 	$(INSTALL_CONF) ./files/mpv.conf $(1)/etc/airbridge-media/mpv.conf
+	$(INSTALL_CONF) ./files/dark-chroma.glsl $(1)/etc/airbridge-media/dark-chroma.glsl
 endef
 
 $(eval $(call BuildPackage,airbridge-media))
