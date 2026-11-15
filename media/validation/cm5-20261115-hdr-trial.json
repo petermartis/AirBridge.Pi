@@ -57,7 +57,17 @@
     "thermal": "65.3 C, throttled=0x80000 (soft temperature limit reached since boot)",
     "storage": "root 21.9 MiB free, media 34 GiB free",
     "governor": "ondemand at 1.5 GHz",
-    "leftovers": "stale /etc/airbridge-media/mpv.conf.apk-new and /etc/config/airbridge-media.apk-new; trial binaries in /tmp until reboot"
+    "leftovers": "Removed at the end of the session: trial binaries and diagnostic tools in the router's /tmp, and the stale /etc/airbridge-media/mpv.conf.apk-new and /etc/config/airbridge-media.apk-new. Unrelated dhcp.apk-new and luci.apk-new were left alone."
   },
-  "performance": "No change made. The player is not CPU- or memory-bound in the measured cases and no setting with a measured gain was found."
+  "performance": "No change made. The player is not CPU- or memory-bound in the measured cases and no setting with a measured gain was found.",
+  "end_of_session_state": {
+    "packages": "airbridge-media r10, engine r1, luci r4, kmods r1",
+    "mpv_conf_sha256_prefix": "362bc50be2fa6eda",
+    "shader_sha256_prefix": "8ba50164592c352c",
+    "playback": "SD film playing on Balanced at 1080p25, zero drops",
+    "wifi": "ch 37, 80 MHz, repair Y, trace N",
+    "lcd": "running",
+    "root_free_kib": 21892,
+    "reboot": "none"
+  }
 }

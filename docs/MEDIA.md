@@ -82,6 +82,9 @@ r10 compares the mode the display **really** has open (`display-width`, `display
 
 Consequences: a 4K HEVC file played under Balanced is output at 1080p (use `quality4k` for 4K); the TV re-syncs when the mode changes between files; modes above 74.25 MHz are never selected for the software path. The earlier unconditional unpause right after `loadfile` could leave a file paused at 0:00 and was removed. Do not load with `vid=no` to hold the display closed: video-only files then end with "no audio or video data played" (r8, replaced the same day).
 
+### Re-signing only the controller package
+The r7–r10 releases changed only `airbridge-media`. They were signed with a short driver that imports `package.py`, limits `PACKAGES` to `airbridge-media`, runs `main()`, then copies the four unchanged signed APKs back from the previous `artifacts/` after checking each SHA-256 against the tracked manifest and regenerates `SHA256SUMS`/`artifact-manifest.json`. The driver was session scratch and is not kept; recreate it the same way. The private key is passed by filename only and never read. Stage the new controller binary into `controller-root` first (keep the previous copy as `controller-root.previous-<ns>`), cross-compiling against `/work/prefix` so the `NEEDED` list matches the installed binary. Never reissue a release number that was installed.
+
 ### HDR (not implemented)
 The player outputs 8-bit RGB with `Colorspace=Default` and no HDR metadata, so HDR files are shown as SDR. `vo=gpu` has no colour signalling and `vo=gpu-next` has no zero-copy overlay path. An unfinished patch and its trial results are in `media/engine/experimental/`; it is not part of any package. Do not enable it without solving the black picture seen at 10 bpc and the lost signal at 12 bpc.
 
