@@ -41,7 +41,7 @@ def main():
         payload = WORK / dirname
         if not payload.is_dir():
             raise SystemExit("Missing prepared payload " + dirname)
-        version = {"airbridge-media": "1.0.0-r10", "luci-app-airbridge-media": "1.0.0-r4"}.get(name, "1.0.0-r1")
+        version = {"airbridge-media": "1.0.0-r11", "luci-app-airbridge-media": "1.0.0-r4"}.get(name, "1.0.0-r1")
         output = OUT / (name + "-" + version + ".apk")
         args = [str(APK), "mkpkg", "--files", str(payload), "--output", str(output),
                 "--sign-key", str(KEY)]

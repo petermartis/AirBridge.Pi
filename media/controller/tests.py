@@ -426,7 +426,8 @@ class ControllerTests(unittest.TestCase):
         self.fake.hardware = "drm"
         self.assertTrue(self.call("profile", name="quality4k")["ok"])
         self.assertTrue(self.call("play", path="movie.mkv")["ok"])
-        self.assertEqual(self.fake.opened_mode, "3840x2160@30")
+        # 25 fps content opens the matched 4K mode, not hardcoded 30 Hz.
+        self.assertEqual(self.fake.opened_mode, "3840x2160@25")
 
     def test_stale_display_is_reopened_for_4k(self):
         self.fake.slow_vo_close = True
@@ -436,7 +437,7 @@ class ControllerTests(unittest.TestCase):
         self.assertTrue(self.call("profile", name="quality4k")["ok"])
         self.fake.commands.clear()
         self.assertTrue(self.call("play", path="movie.mkv")["ok"])
-        self.assertEqual(self.fake.opened_mode, "3840x2160@30")
+        self.assertEqual(self.fake.opened_mode, "3840x2160@25")
         names = [c[0] if c[0] != "set_property" else (c[1], c[2]) for c in self.fake.commands]
         reopen = next(i for i, n in enumerate(names) if isinstance(n, tuple) and n[0] == "wid")
         self.assertLess(reopen, names.index(("pause", False)))
@@ -444,16 +445,63 @@ class ControllerTests(unittest.TestCase):
     def test_stale_4k_display_is_reopened_for_software(self):
         self.fake.slow_vo_close = True
         self.assertTrue(self.call("play", path="movie.mkv")["ok"])
-        self.assertEqual(self.fake.opened_mode, "3840x2160@30")
+        self.assertEqual(self.fake.opened_mode, "3840x2160@24")
         self.assertTrue(self.software_play(30)["ok"])
         self.assertEqual(self.fake.opened_mode, "1920x1080@30")
 
+    def test_4k_mode_follows_frame_rate(self):
+        for fps, mode in [(24, "3840x2160@24"), (25, "3840x2160@25"),
+                          (23.976, "3840x2160@23.98"), (29.97, "3840x2160@29.97"),
+                          (30, "3840x2160@30"), (50, "3840x2160@25"),
+                          (0, "3840x2160@30"), (1e9, "3840x2160@30")]:
+            self.fake.properties["track-list"] = [
+                {"id": 1, "type": "video", "demux-fps": fps},
+                {"id": 2, "type": "audio", "lang": "eng", "selected": True}]
+            self.assertTrue(self.call("play", path="movie.mkv")["ok"], fps)
+            self.assertEqual(self.fake.opened_mode, mode, fps)
+
+    def test_4k_mode_falls_back_to_30(self):
+        self.fake.bad_modes = {"3840x2160@24"}
+        self.assertTrue(self.call("play", path="movie.mkv")["ok"])
+        self.assertEqual(self.fake.opened_mode, "3840x2160@30")
+
+    def test_4k_same_rate_reuses_open_display(self):
+        self.assertTrue(self.call("play", path="movie.mkv")["ok"])
+        self.assertEqual(self.fake.opened_mode, "3840x2160@24")
+        self.assertTrue(self.call("play", path="movie.mkv")["ok"])
+        wids = [c for c in self.fake.commands if c[:2] == ["set_property", "wid"]]
+        self.assertEqual(len(wids), 1)
+
+    def test_reopen_wid_alternates(self):
+        self.fake.slow_vo_close = True
+        self.assertTrue(self.call("play", path="movie.mkv")["ok"])
+        self.assertEqual(self.fake.opened_mode, "3840x2160@24")
+        # First reopen of a fresh display must move the id 0 -> 1.
+        first = [c[2] for c in self.fake.commands if c[:2] == ["set_property", "wid"]]
+        self.assertEqual(first, [1])
+        # software_play() clears the command log.
+        self.assertTrue(self.software_play(30)["ok"])
+        self.assertEqual(self.fake.opened_mode, "1920x1080@30")
+        # The next reopen must alternate back to 0, not resend 1.
+        second = [c[2] for c in self.fake.commands if c[:2] == ["set_property", "wid"]]
+        self.assertEqual(second, [0])
+
     def test_4k_display_unavailable_fails_closed(self):
-        self.fake.bad_modes = {"3840x2160@30"}
+        self.fake.bad_modes = {"3840x2160@24", "3840x2160@30"}
         result = self.call("play", path="movie.mkv")
         self.assertFalse(result["ok"])
         self.assertEqual(self.fake.commands[-1], ["stop"])
         self.assertFalse(any(c == ["set_property", "pause", False] for c in self.fake.commands))
+
+    def test_m4a_is_supported(self):
+        (self.root / "track.m4a").write_bytes(b"fake media")
+        self.fake.hardware = "no"
+        self.fake.properties["track-list"] = [
+            {"id": 1, "type": "audio", "lang": "eng", "selected": True}]
+        self.assertTrue(self.call("profile", name="balanced")["ok"])
+        self.assertTrue(self.call("play", path="track.m4a")["ok"])
+        load = next(c for c in self.fake.commands if c[0] == "loadfile")
+        self.assertEqual(load[4]["demuxer-lavf-format"], "mov")
 
     def test_queue(self):
         self.assertEqual(self.call("queue", action="list")["entries"], [])

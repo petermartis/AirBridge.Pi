@@ -151,13 +151,6 @@ return view.extend({
 					return self.command('tracks', [ pair[1], id ]);
 			});
 		});
-		this.profile = register(E('select', { 'aria-label': _('Playback profile') },
-			[ 'quality4k', 'balanced', 'quiet' ].map(function(name) {
-				return E('option', { value: name }, [ name ]);
-			})), 'profile');
-		this.profile.addEventListener('change', function() {
-			return self.command('profile', [ self.profile.value ]);
-		});
 
 		this.breadcrumb = E('p');
 		this.browseNotice = E('p', { 'role': 'status' });
@@ -204,7 +197,7 @@ return view.extend({
 			E('h2', {}, [ _('AirBridge.Pi Media') ]),
 			E('p', {}, [ _('4K HDMI acceptance is a manual check on the connected display. Decoder telemetry alone does not prove picture, sound, or smooth playback; see the device validation record.') ]),
 			E('p', {}, [ _('Only the controller-configured media library is exposed. No filesystem paths, URLs or shell commands can be entered here.') ]),
-			E('p', {}, [ _('Default quality4k requires active hardware decoding. Selecting it stops the current file; press Play again. Use Balanced or Quiet for codecs needing software decoding, such as H.264, VP9, or AV1 on this CM5. Their 4K performance is not guaranteed.') ]),
+			E('p', {}, [ _('Playback is fully automatic: each file is decoded with the best engine for its codec (hardware for 4K HEVC, software otherwise) and shown at its native refresh rate on the TV.') ]),
 			this.notice, this.engineError, this.capabilityNotice, this.failure, this.title,
 			E('div', { 'class': 'ab-media-row' }, [
 				this.pause, button(_('Stop'), 'stop', function() { return self.command('stop', []); }),
@@ -219,7 +212,6 @@ return view.extend({
 				E('label', {}, [ this.mute, ' ', _('Mute') ]),
 				E('label', {}, [ _('Audio'), ' ', this.audio ]),
 				E('label', {}, [ _('Subtitles'), ' ', this.subtitles ]),
-				E('label', {}, [ _('Profile'), ' ', this.profile ])
 			]),
 			this.telemetry,
 			E('h3', {}, [ _('Library') ]), this.breadcrumb, this.browseNotice,
@@ -280,8 +272,6 @@ return view.extend({
 			this.volume.value = typeof status.volume === 'number' ? status.volume : 0;
 		text(this.volumeLabel, typeof status.volume === 'number' ? status.volume + '%' : '—');
 		this.mute.checked = status.mute === true;
-		if (document.activeElement !== this.profile && [ 'balanced', 'quality4k', 'quiet' ].indexOf(status.profile) !== -1)
-			this.profile.value = status.profile;
 		this.renderTracks(this.audio, 'audio');
 		this.renderTracks(this.subtitles, 'sub');
 		var fields = [
@@ -308,9 +298,11 @@ return view.extend({
 		this.controls.forEach(function(control) {
 			var fileOperation = control.capability === 'remove';
 			var engineRequired = control.capability !== 'browse' && !fileOperation;
+			var isPauseOrStopOrSeek = control.capability === 'pause' || control.capability === 'stop' || control.capability === 'seek';
 			control.node.disabled = self.busy || capabilities[control.capability] !== true ||
 				(!control.readOnly && !self.writable) ||
-				(engineRequired && (self.status.available !== true || self.status.state === 'unavailable'));
+				(engineRequired && (self.status.available !== true || self.status.state === 'unavailable' ||
+					(isPauseOrStopOrSeek && self.status.state === 'idle')));
 			if (fileOperation)
 				control.node.disabled = !self.canManageFiles('remove') || self.fileBusy;
 		});
